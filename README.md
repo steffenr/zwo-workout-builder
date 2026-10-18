@@ -134,6 +134,11 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
 ### Plans
 
 - **Athlete level** 1–5 from W/kg, recent hours and experience. Starting load ≈ hours × 52 TSS.
+- **Build-up for under-trained riders**: when the current load is below 60 % of what the
+  schedule offers (≈ 50 TSS per available hour), the plan starts from the current load, ramps
+  up to 10 % per build week and allows one key session in the first block (two afterwards).
+  If a week is still more than 15 % over its target with every session at its minimum
+  length, easy and recovery days become rest days.
 - **Weeks**: three build weeks, then a recovery week (≈55 % load). Load grows 4–8 % per build
   week (intensity setting). Event plans end with a taper week. Phases: 40 % base,
   40 % build, 20 % peak.
@@ -161,10 +166,10 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
 
 ## Checks
 
-`npm test` builds five sample plans (beginner, FTP, polarized racer, gran fondo with an
-outdoor day, two days a week) and reports:
+`npm test` builds six sample plans (beginner, FTP, polarized racer, gran fondo with an
+outdoor day, comeback with far more time than current fitness, two days a week) and reports:
 
-- weeks over their load target, slot durations not met
+- weeks over their load target, week 1 above 1.3 × the current load, slot durations not met
 - back-to-back hard days
 - TSS changes after writing and re-parsing the `.zwo` files
 - whether the classifier recognises each generated workout as its intended type

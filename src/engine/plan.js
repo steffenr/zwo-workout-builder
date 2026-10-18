@@ -130,7 +130,7 @@ export function keyList(input, phase, style) {
   return [...new Set(L)];
 }
 
-function keyCount(nIndoor, nTotal, ath, style, kind) {
+function keyCount(nIndoor, nTotal, ath, style, kind, buildUp = 0) {
   if (kind === 'recovery') return Math.min(1, nIndoor);
   if (kind === 'taper') return Math.min(2, nIndoor);
   const table = [0, 1, 1, 2, 2, 2, 3, 3];
@@ -140,6 +140,9 @@ function keyCount(nIndoor, nTotal, ath, style, kind) {
   // with only two rides a week, both can be quality sessions
   if (nTotal <= 2 && ath.intensity >= 3 && ath.level >= 2) k = nTotal;
   if (style === 'polarized') k = Math.min(k, 2);
+  // riders who currently train far below their available time: one key session in the
+  // first block, at most two afterwards, until volume has caught up
+  if (buildUp) k = Math.min(k, buildUp);
   k = Math.min(k, 3);
   return clamp(k, 1, Math.max(1, nIndoor - (nIndoor >= 3 ? 1 : 0)));
 }
@@ -212,8 +215,12 @@ export function buildPlan(input, ctx) {
   };
   const weakEndurance = (input.weaknesses || []).includes('endurance');
 
-  // load targets
-  const ramp = 0.03 + 0.01 * ath.intensity;
+  // load targets. Riders whose current load is well below what their schedule offers
+  // ("under-trained" for the plan) ramp a little faster (max 10 %/week) from their real load
+  // instead of jumping to the schedule's capacity.
+  const capacityTss = days.reduce((a, d) => a + (d.minutes / 60) * 50, 0);
+  const underTrained = ath.startTss < 0.6 * capacityTss;
+  const ramp = Math.min(0.1, 0.03 + 0.01 * ath.intensity + (underTrained ? 0.03 : 0));
   const loadWeeks = types.filter((t) => t === 'load').length;
   let lastLoad = ath.startTss;
   const loadHistory = [];
@@ -242,14 +249,16 @@ export function buildPlan(input, ctx) {
     // roles
     const indoor = days.filter((d) => !d.outdoor);
     const outdoor = days.filter((d) => d.outdoor);
-    const K = keyCount(indoor.length, days.length, ath, style, kind);
+    const lastLoad4 = loadHistory.at(-1) ?? ath.startTss;
+    const buildUp = underTrained && lastLoad4 < 0.6 * capacityTss ? (w <= 4 ? 1 : 2) : 0;
+    const K = keyCount(indoor.length, days.length, ath, style, kind, buildUp);
     const longest = [...days].sort((a, b) => b.minutes - a.minutes || b.day - a.day)[0];
     const hasLong = longest && (days.length >= 3 || goal.longRide) && !(indoor.length <= K && !longest.outdoor);
     const longDay = hasLong ? longest.day : null;
     const keyDays = chooseKeyDays(indoor, K, longDay && !longest.outdoor ? longDay : null);
     const testWeek = input.includeTest && (w === 1 || (!hasEvent && w === N && N >= 6));
 
-    const sessions = days.map((d) => {
+    let sessions = days.map((d) => {
       if (d.outdoor) {
         // outdoor rides are not generated; their load is estimated (and expected easier in lighter weeks)
         const easyFactor = kind === 'load' ? 1 : 0.75;
@@ -320,20 +329,34 @@ export function buildPlan(input, ctx) {
     const light = kind !== 'load';
     const floors = light ? { easy: 30, recovery: 30, long: 40, key: 30, test: 0 } : { easy: 40, recovery: 30, long: 60, key: 45, test: 0 };
     const order = ['easy', 'long', 'key'];
-    for (let it = 0; it < 14 && total() > target * 1.05; it++) {
-      let changed = false;
-      for (const role of order) {
-        const list = sessions.filter((s) => !s.outdoor && s.role === role && s.dur > floors[role]);
-        if (!list.length) continue;
-        for (const s of list) {
-          s.dur = Math.max(floors[role], round5(s.dur * 0.9));
-          if (s.workout?.source) used.delete(s.workout.source.id);
-          gen(s);
+    const trim = () => {
+      for (let it = 0; it < 14 && total() > target * 1.05; it++) {
+        let changed = false;
+        for (const role of order) {
+          const list = sessions.filter((s) => !s.outdoor && s.role === role && s.dur > floors[role]);
+          if (!list.length) continue;
+          for (const s of list) {
+            s.dur = Math.max(floors[role], round5(s.dur * 0.9));
+            if (s.workout?.source) used.delete(s.workout.source.id);
+            gen(s);
+          }
+          changed = true;
+          break;
         }
-        changed = true;
-        break;
+        if (!changed) break;
       }
-      if (!changed) break;
+    };
+    trim();
+    // Still over target although every session is at its minimum length: give back whole
+    // days (easy and recovery rides become rest days), so the plan never starts far above
+    // the rider's current load.
+    for (let it = 0; it < 7 && total() > target * 1.15; it++) {
+      const cands = sessions.filter((s) => !s.outdoor && (s.role === 'easy' || s.role === 'recovery'));
+      if (!cands.length) break;
+      const t = total();
+      const drop = cands.reduce((best, s) => (Math.abs(t - s.workout.metrics.tss - target) < Math.abs(t - best.workout.metrics.tss - target) ? s : best));
+      sessions = sessions.filter((s) => s !== drop);
+      trim();
     }
     for (const s of sessions) if (s.workout) lastFormat[s.category] = s.workout.format;
 

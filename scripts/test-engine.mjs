@@ -23,6 +23,8 @@ const scenarios = [
     days: [1, 2, 3, 4, 6, 7].map((d) => ({ day: d, minutes: d >= 6 ? 180 : 75 })), style: 'polarized', riderType: 'sprinter', weaknesses: ['vo2', 'punch'], source: 'mixed' },
   { label: 'Fondo with outdoor Sunday', ftp: 230, weight: 78, hours: 7, years: 2, intensity: 3, goal: 'fondo', weeks: 12, eventDate: '2027-06-01',
     days: [{ day: 2, minutes: 60 }, { day: 4, minutes: 75 }, { day: 6, minutes: 120 }, { day: 7, minutes: 240, outdoor: true }], style: 'auto', source: 'library' },
+  { label: 'Comeback: 2 h now, 8 h available', ftp: 250, weight: 75, hours: 2, years: 2, intensity: 4, goal: 'ftp', weeks: 8,
+    days: [{ day: 2, minutes: 75 }, { day: 3, minutes: 60 }, { day: 4, minutes: 75 }, { day: 6, minutes: 150 }, { day: 7, minutes: 120 }], style: 'auto', source: 'mixed' },
   { label: 'Time-crunched sweet spot, 2 days', ftp: 260, weight: 80, hours: 3, years: 1, intensity: 3, goal: 'ftp', weeks: 6,
     days: [{ day: 3, minutes: 45 }, { day: 6, minutes: 60 }], style: 'sweetspot', source: 'composed' },
 ];
@@ -37,6 +39,7 @@ for (const sc of scenarios) {
   const plan = buildPlan(sc, ctx);
   const ms = Date.now() - t0;
   console.log(`\n### ${sc.label} → ${plan.name}  (${plan.athlete.levelLabel}, style ${plan.style}, ${ms} ms)`);
+  if (plan.weeks[0].tss > plan.athlete.startTss * 1.3) warn(`week 1 load ${plan.weeks[0].tss} > 1.3 × current ${plan.athlete.startTss}`);
   for (const wk of plan.weeks) {
     const cells = wk.sessions.map((s) => s.outdoor ? `${DAY_NAMES[s.day - 1]} outdoor ${s.minutes}` : `${DAY_NAMES[s.day - 1]} ${s.category}${s.workout.source ? '*' : ''} ${s.workout.durMin}`);
     console.log(`W${String(wk.week).padStart(2)} ${wk.kind.padEnd(8)} ${wk.phase.padEnd(6)} TSS ${String(wk.tss).padStart(4)}/${String(wk.targetTss).padStart(4)}  ${wk.hours}h | ${cells.join(' · ')}`);
