@@ -4,6 +4,7 @@ import {
 } from '../engine/plan.js';
 import { CATEGORY_INFO } from '../engine/compose.js';
 import { toZwo, makeZip } from '../engine/export.js';
+import { toIctx } from '../engine/ictx.js';
 import { slug } from '../engine/naming.js';
 
 // Engine data is embedded as base64-encoded gzip JSON in the page
@@ -116,8 +117,29 @@ async function downloadWorkout(w) {
 function downloadPlan(plan) {
   saveFile(`${plan.slug}.zip`, makeZip(planFiles(plan)));
 }
+let ictxBlocked = false; // set when the hosting view refuses .ictx files
+async function downloadIctx(w, planName, displayOrder = 1) {
+  const fname = w.file.replace(/\.zwo$/, '.ictx');
+  const data = toIctx({ name: w.fullName, plan: planName || '', displayOrder, description: w.description, blocks: w.blocks });
+  const zipIt = () => saveFile(fname.replace(/\.ictx$/, '.zip'), makeZip([{ name: fname, data }]));
+  if (ictxBlocked) { zipIt(); return; }
+  try {
+    await saveFile(fname, data, { rethrow: true });
+  } catch (e) {
+    if (e?.code === 'rejected_extension' || e?.code === 'extension_not_enabled') {
+      ictxBlocked = true;
+      render();
+      toast('This view only allows .zip downloads, so the .ictx comes inside a .zip. The offline app saves .ictx directly.');
+      setTimeout(zipIt, 400);
+    } else toast(e?.message || 'The file could not be saved.');
+  }
+}
 function downloadOptions(opts) {
-  const files = opts.map((w) => ({ name: w.file, data: toZwo({ name: w.fullName, description: w.description, tags: w.tags, blocks: w.blocks }) }));
+  const files = [];
+  for (const w of opts) {
+    files.push({ name: w.file, data: toZwo({ name: w.fullName, description: w.description, tags: w.tags, blocks: w.blocks }) });
+    files.push({ name: w.file.replace(/\.zwo$/, '.ictx'), data: toIctx({ name: w.fullName, plan: '', displayOrder: 1, description: w.description, blocks: w.blocks }) });
+  }
   saveFile('zwo-workouts.zip', makeZip(files));
 }
 
@@ -449,7 +471,7 @@ function resultPlan() {
     let detail = '';
     if (openCell && openCell[0] === wi) {
       const w = wk.sessions[openCell[1]].workout;
-      detail = detailHTML(w, input.ftp, `<button type="button" class="btn ghost" data-act="reroll">Swap for another</button><button type="button" class="btn" data-act="dl-one">${dlLabel()}</button>`, `plan:${wi},${openCell[1]}`);
+      detail = detailHTML(w, input.ftp, `<button type="button" class="btn ghost" data-act="reroll">Swap for another</button><button type="button" class="btn" data-act="dl-one">${dlLabel()}</button><button type="button" class="btn ghost" data-act="dl-ictx">Download .ictx</button>`, `plan:${wi},${openCell[1]}`);
     }
     return `<section class="week ${wk.kind}">
       <header><h3>Week ${wk.week}</h3><span class="pill ${PHASE_CLASS(wk)}">${phaseLabel(wk)}</span>${wk.cappedByTime && wk.kind === 'load' ? '<span class="capped" title="Your available time limits the load this week">time-limited</span>' : ''}<span class="num wk-stats">${wk.hours} h · ${wk.tss} TSS</span></header>
@@ -476,7 +498,7 @@ function resultPlan() {
       <div class="phases">${phases}</div>
       <div class="legend" style="margin-top:8px"><i class="lg" style="background:var(--z2)"></i>base <i class="lg" style="background:var(--z4)"></i>build <i class="lg" style="background:var(--z6)"></i>peak</div>
     </div>
-    <p class="hint">Select a session for its details. The ZIP holds one folder with every workout named Week/Day in plan order, plus an overview. Copy the folder into Zwift's Workouts folder, or convert it with WoZ Tools.</p>
+    <p class="hint">Select a session for its details. The ZIP holds one folder with every workout in .zwo and .ictx (icTrainer) named Week/Day in plan order, plus an overview. Copy the .zwo files into Zwift's Workouts folder, or import the .ictx files into icTrainer.</p>
     ${weeksHtml}</div>`;
 }
 
@@ -487,7 +509,7 @@ function resultSingle() {
       <div><div class="eyebrow">Single workout</div><h2>${options.length} options for ${fmtMin(input.durMin)}</h2></div>
       <div class="actions"><button type="button" class="btn ghost" data-act="edit">Change answers</button><button type="button" class="btn ghost" data-act="shuffle">More options</button><button type="button" class="btn primary" data-act="dl-all">${DL_ICON}Download all (.zip)</button></div>
     </div>
-    <div class="options">${options.map((w, i) => `<article class="opt"><div class="optno">Option ${i + 1}</div>${detailHTML(w, input.ftp, `<button type="button" class="btn" data-act="dl-opt" data-i="${i}">${dlLabel()}</button>`, `single:${i}`)}</article>`).join('')}</div></div>`;
+    <div class="options">${options.map((w, i) => `<article class="opt"><div class="optno">Option ${i + 1}</div>${detailHTML(w, input.ftp, `<button type="button" class="btn" data-act="dl-opt" data-i="${i}">${dlLabel()}</button><button type="button" class="btn ghost" data-act="dl-ictx-opt" data-i="${i}">Download .ictx</button>`, `single:${i}`)}</article>`).join('')}</div></div>`;
 }
 
 // ---------------------------------------------------------------- render
@@ -584,6 +606,8 @@ document.addEventListener('click', (e) => {
     case 'dl-all': downloadOptions(result.options); break;
     case 'dl-opt': downloadWorkout(result.options[+t.dataset.i]); break;
     case 'dl-one': downloadWorkout(result.plan.weeks[openCell[0]].sessions[openCell[1]].workout); break;
+    case 'dl-ictx': downloadIctx(result.plan.weeks[openCell[0]].sessions[openCell[1]].workout, result.plan.slug); break;
+    case 'dl-ictx-opt': downloadIctx(result.options[+t.dataset.i], ''); break;
     case 'reroll': {
       rerolls++;
       const w = rerollSession(result.plan, openCell[0], openCell[1], ctx, result.input, rerolls);

@@ -6,6 +6,7 @@ import {
   workoutName, describe, fileName, slug,
 } from './naming.js';
 import { toZwo } from './export.js';
+import { toIctx } from './ictx.js';
 
 export const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -504,16 +505,22 @@ export function phaseLabel(wk) {
   return { base: 'base phase', build: 'build phase', peak: 'peak phase' }[wk.phase] || wk.phase;
 }
 
-/** Files for a plan download: one .zwo per indoor session plus an overview. */
+/** Files for a plan download: one .zwo and one .ictx per indoor session plus an overview. */
 export function planFiles(plan) {
   const files = [];
+  let order = 0;
   for (const wk of plan.weeks) {
     for (const s of wk.sessions) {
       if (s.outdoor) continue;
       const w = s.workout;
+      order++;
       files.push({
         name: `${plan.slug}/${w.file}`,
         data: toZwo({ name: w.fullName, description: w.description, tags: w.tags, blocks: w.blocks }),
+      });
+      files.push({
+        name: `${plan.slug}/${w.file.replace(/\.zwo$/, '.ictx')}`,
+        data: toIctx({ name: w.fullName, plan: plan.slug, displayOrder: order, description: w.description, blocks: w.blocks }),
       });
     }
   }

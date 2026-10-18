@@ -22,28 +22,34 @@ Open **`dist/zwo-workout-builder.html`** in a browser.
    rider type, weak spots, cadence drills
 6. **Result**
    - Plan: load chart, week × day calendar, workout details with power profile in watts,
-     "Swap for another", **Download plan (.zip)**
-   - Single: three options, each as **Download .zwo**, or all as a .zip
+     "Swap for another", **Download plan (.zip)**, and a **Download .ictx** button for the
+     open session
+   - Single: three options, each as **Download .zwo** and **Download .ictx**, or all as a .zip
+
+**icTrainer export.** Every workout also generates a `.ictx` file (icTrainer's XML format):
+the plan ZIP contains one `.zwo` *and* one `.ictx` per indoor session, and single workouts
+can be downloaded directly as `.ictx`.
 
 Plan ZIP layout:
 
 ```
 <plan-slug>/
   Week01_Day02_Red_Line_#1_Threshold_4x5min.zwo   # Day = weekday, 1 = Monday
+  Week01_Day02_Red_Line_#1_Threshold_4x5min.ictx  # same session for icTrainer
   Week01_Day07_Base_Miles_Endurance_120min.zwo
   …
   plan-overview.md
 ```
 
-Copy the folder into Zwift's `Documents/Zwift/Workouts/<user id>/`, or convert it with
-WoZ Tools. Power targets are % of FTP, so the files work for any FTP.
+Copy the `.zwo` files into Zwift's `Documents/Zwift/Workouts/<user id>/`, or import the
+`.ictx` files into icTrainer. Power targets are % of FTP, so the files work for any FTP.
 
 Clicking the logo returns to the mode selection; answers and the last result are kept.
 Answers and the chosen colour theme (system / light / dark) are stored in the browser's
 local storage only.
 
 **Inside claude.ai** the published copy of the app can only save `.zip` files; single
-workouts then come as a `.zwo` inside a `.zip`. The local HTML file saves `.zwo` directly.
+`.zwo` / `.ictx` workouts then come inside a `.zip`. The local HTML file saves them directly.
 
 ## Project layout
 
@@ -60,6 +66,7 @@ _workout-builder/            lives inside the workout library folder (folders st
 │   │   ├── library.js       picks a library structure and fits it to the slot; own set labels
 │   │   ├── naming.js        series names, file names, descriptions
 │   │   ├── export.js        .zwo XML writer, ZIP writer (store, no compression)
+│   │   ├── ictx.js          .ictx (icTrainer) XML writer, port of the WoZ converter
 │   │   ├── blocks.js        block constructors, compact encoding
 │   │   └── rng.js           seeded PRNG + hash (same answers → same plan)
 │   ├── app/                 wizard UI: main.js + template.html
