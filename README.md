@@ -143,7 +143,9 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
   week (intensity setting). Event plans end with a taper week. Phases: 40 % base,
   40 % build, 20 % peak.
 - **Week layout**: the longest day is the long ride; 1–3 key sessions (by days, level,
-  intensity, style) go on days that keep hard sessions apart; the day after a key session
+  intensity, style) go on days that keep hard sessions apart (Sunday → Monday counts as
+  adjacent) and not on the day after the long ride (strongly penalised; advanced riders
+  may get it as a weekend block when no other day fits); the day after a key session
   is a recovery ride for less experienced riders. Sessions shrink when a week overshoots its
   load target; available time caps the load ("time-limited").
 - **Key session types** rotate through a list per goal and phase, changed by style
@@ -175,7 +177,7 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
 outdoor day, comeback with far more time than current fitness, two days a week) and reports:
 
 - weeks over their load target, week 1 above 1.3 × the current load, slot durations not met
-- back-to-back hard days
+- back-to-back hard days, key sessions after a ≥ 150 min ride (levels 1–3)
 - TSS changes after writing and re-parsing the `.zwo` files
 - whether the classifier recognises each generated workout as its intended type
 - duplicate file names

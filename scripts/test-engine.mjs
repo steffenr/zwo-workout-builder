@@ -47,6 +47,14 @@ for (const sc of scenarios) {
     // back-to-back hard
     const hardDays = wk.sessions.filter((s) => HARD.has(s.category)).map((s) => s.day);
     for (let i = 1; i < hardDays.length; i++) if (hardDays[i] - hardDays[i - 1] === 1) console.log(`  · back-to-back hard days in week ${wk.week}`);
+    // no key session on the day after a long ride (>= 150 min) for levels <= 3
+    if (plan.athlete.level <= 3) {
+      for (const s of wk.sessions) {
+        const len = s.outdoor ? s.minutes : s.workout.durMin;
+        const next = wk.sessions.find((x) => x.day === (s.day % 7) + 1);
+        if (len >= 150 && next && !next.outdoor && HARD.has(next.category)) warn(`W${wk.week} ${DAY_NAMES[next.day - 1]}: key session after a ${len} min ride`);
+      }
+    }
     for (const s of wk.sessions) {
       if (s.outdoor) continue;
       const w = s.workout;

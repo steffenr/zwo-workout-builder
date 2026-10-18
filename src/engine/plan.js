@@ -164,8 +164,15 @@ export function weekTypes(N, hasEvent) {
   return out;
 }
 
-function chooseKeyDays(indoor, K, longDay) {
+// Day numbers 1..7 (Mon..Sun) wrap around: Sunday's long ride is followed by Monday.
+const nextDay = (d) => (d % 7) + 1;
+const adjacent = (a, b) => nextDay(a) === b || nextDay(b) === a;
+
+function chooseKeyDays(indoor, K, longDay, level = 3) {
   const cands = indoor.filter((s) => s.day !== longDay);
+  // A key session on legs tired from the long ride loses quality and stacks fatigue;
+  // only very experienced riders get it as a deliberate weekend block.
+  const afterLongPenalty = level >= 4 ? 3 : 6;
   let best = null;
   const combos = (arr, k, start = 0, acc = []) => {
     if (acc.length === k) { score(acc); return; }
@@ -174,8 +181,13 @@ function chooseKeyDays(indoor, K, longDay) {
   const score = (sel) => {
     const days = sel.map((s) => s.day).sort((a, b) => a - b);
     let sc = sel.reduce((a, s) => a + Math.min(s.minutes, 90) / 10, 0);
-    for (let i = 1; i < days.length; i++) if (days[i] - days[i - 1] === 1) sc -= 4;
-    if (longDay) for (const d of days) if (Math.abs(d - longDay) === 1) sc -= 1.5;
+    for (let i = 0; i < days.length; i++) for (let j = i + 1; j < days.length; j++) if (adjacent(days[i], days[j])) sc -= 4;
+    if (longDay) {
+      for (const d of days) {
+        if (d === nextDay(longDay)) sc -= afterLongPenalty;
+        else if (nextDay(d) === longDay) sc -= 1;
+      }
+    }
     for (const s of sel) if (s.minutes < 45) sc -= 3;
     if (!best || sc > best.sc) best = { sc, sel };
   };
@@ -255,7 +267,7 @@ export function buildPlan(input, ctx) {
     const longest = [...days].sort((a, b) => b.minutes - a.minutes || b.day - a.day)[0];
     const hasLong = longest && (days.length >= 3 || goal.longRide) && !(indoor.length <= K && !longest.outdoor);
     const longDay = hasLong ? longest.day : null;
-    const keyDays = chooseKeyDays(indoor, K, longDay && !longest.outdoor ? longDay : null);
+    const keyDays = chooseKeyDays(indoor, K, longDay, ath.level);
     const testWeek = input.includeTest && (w === 1 || (!hasEvent && w === N && N >= 6));
 
     let sessions = days.map((d) => {
