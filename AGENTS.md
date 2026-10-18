@@ -73,10 +73,17 @@ plans and workouts from wizard input plus `library.json` and `rules.json`
 
 ## Working on the UI
 
-- Follow `DESIGN.md`: tokens only (no literal colours in components), both themes, zone
-  colours only for training intensity, accent only for actions and selection.
+- Follow `DESIGN.md`. The app uses zwoTrainer's design system (`../zwoTrainer/DESIGN.md`,
+  `ui/css/styles.css`): same tokens, fonts, five zone colours and component classes. When
+  zwoTrainer changes a token or a shared component, mirror it here.
+- Tokens only (no literal colours in components), both themes, zone colours only for
+  training intensity, the accent only for actions, selection and progress.
+- Don't add controls to the top bar (logo left, Settings right). New options go into the
+  Settings popover.
 - Rebuild with `npm run build` and open the file at 1280 px and 390 px in light and dark
   mode. The page body must never scroll horizontally.
+- esbuild has a native binary: run `npm install` on the machine that builds (a
+  `node_modules` from macOS won't work in a Linux shell and vice versa).
 - Copy: short, plain English, active voice, no mention of the library.
 
 ## Before finishing a change

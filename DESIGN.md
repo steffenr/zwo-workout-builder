@@ -1,167 +1,220 @@
-# DESIGN.md
+# DESIGN.md — zwoWorkoutBuilder design system
 
-The visual and interaction design of the Zwo Workout Builder. The source of truth for tokens
-is the `:root` block in `src/app/template.html`; this file explains them and the rules for
-using them.
+zwoWorkoutBuilder uses the design system of **zwoTrainer** (`../zwoTrainer/DESIGN.md`,
+`ui/css/styles.css`), so both apps look and behave like one product. This file lists what
+the builder uses from it, the few builder-specific components, and the rules for changes.
 
-## Direction
+Everything lives in `src/app/template.html` (tokens on `:root`, component CSS) and a few
+constants in `src/app/main.js` (`ZONE_BOUNDS`, `ZONES`, `ZONE_OF`). If zwoTrainer changes a
+token or a shared component, mirror the change here. A new pattern is documented here.
 
-A **bike head unit** in the browser: dark data panels with big monospaced readouts, a
-condensed italic display face that suggests speed, and the training zone colours as the
-visual language. Sporty, but a tool first: every screen is something you operate, not read.
+## Principles
 
-Recurring motifs:
-
-- **Zone spectrum**: the seven zone colours as a strip under the header and in the logo mark.
-- **Ramp-test progress**: each wizard step fills a slanted bar in the next zone colour
-  (Z1 → Z6), like the steps of a ramp test.
-- **Head unit**: the "Your ride" summary and the plan stats row are always-dark panels with
-  mono numbers and small uppercase labels.
+1. **Calm and clean.** The workout is the hero. Few controls, generous whitespace, no
+   decoration that doesn't carry information.
+2. **Colour means zone.** The five zone colours are reserved for training intensity. UI
+   chrome uses neutral greys and one accent.
+3. **Same structure everywhere.** The top bar never changes shape; one primary action per
+   view or dialog, placed last (right); dialogs share one layout.
+4. **Light and dark are equals.** Light mode is pure white (`#fff`), dark mode pure black
+   (`#000`). Every element is checked in both.
+5. **One family with zwoTrainer.** Same tokens, fonts, icon, zone palette and component
+   classes; the brand reads `zwo` + accent word (`zwoTrainer`, `zwoWorkoutBuilder`).
 
 ## Colour
 
-All colours are CSS custom properties. Components use tokens only, never literal values.
-Every token has a light value on `:root`, and dark values under
-`@media (prefers-color-scheme: dark) :root:not([data-theme="light"])` and
-`:root[data-theme="dark"]`.
+### Theme tokens
 
-### Surface and text
-
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| `--bg` | `#eef0f3` | `#0b0d10` | page background |
-| `--panel` | `#ffffff` | `#14171c` | cards, wizard panel |
-| `--sunk` | `#f3f4f7` | `#1b1f26` | inputs, inactive cells, detail panel |
-| `--ink` | `#12151a` | `#eceef2` | text, selected segmented button |
-| `--muted` | `#5a6271` | `#9aa2b0` | secondary text, labels |
-| `--line` | `#dadee5` | `#2a2f38` | borders, empty tracks |
-
-### Accent and status
+Always use tokens (`var(--…)`), never raw hex in components. Dark values apply via
+`prefers-color-scheme` unless the user picked a theme in Settings
+(`:root[data-theme="light|dark"]`).
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--accent` | `#d1006b` | `#ff4fa3` | primary action, selection, active riding day, slider fill |
-| `--accent-ink` | `#ffffff` | `#160710` | text on accent |
-| `--warn` | `#a85a00` | `#f5a524` | validation hints, "time-limited" |
-| `--good` | `#1f8a4c` | `#4ccf83` | reserved for success states |
+| `--bg` | `#ffffff` | `#000000` | page background |
+| `--surface` | `#ffffff` | `#0b0b0c` | cards, dialog, inputs, workout rows |
+| `--surface-2` | `#f5f6f8` | `#141416` | hover, segmented-control track, profile backgrounds, resting days |
+| `--surface-3` | `#eceef2` | `#1c1c1f` | code chips, muted badges, step numbers |
+| `--line` | `#e5e7eb` | `#232326` | borders, dividers |
+| `--line-strong` | `#cfd3da` | `#34343a` | input borders, hover borders, taper weeks |
+| `--text` | `#1f2328` | `#f2f2f3` | primary text |
+| `--text-2` | `#555555` | `#cccccc` | secondary text, descriptions |
+| `--muted` | `#8a9099` | `#85858d` | labels, meta |
+| `--accent` | `#00a3c4` | `#1cc4e6` | primary buttons, selection, current step, progress, build weeks |
+| `--accent-hover` | `#0090ad` | `#44d2ee` | primary button hover |
+| `--accent-ink` | `#ffffff` | `#001318` | text on accent |
+| `--accent-soft` | 10 % accent | 14 % accent | selected backgrounds, day badges, done steps |
+| `--ok` / `--ok-soft` | `#2e9e4f` | `#4cd07a` | success |
+| `--warn` / `--warn-soft` | `#b7791f` | `#f2c14e` | validation hints, "Time-limited" |
+| `--danger` | `#e0352b` | `#ff5a4f` | destructive actions (none yet) |
+| `--ftp` | text colour | white | FTP line in profiles |
+| `--track` | `#eceef2` | `#1c1c1f` | progress-bar track |
 
-The accent is a race-leader pink, chosen to stay clear of the zone colours and of Zwift's
-orange. Use it for **what the user does or has chosen**, never for data.
+### Zone colours (fixed; identical in both themes)
 
-### Head unit (always dark)
+Five zones as in zwoTrainer. Upper bounds of Z1–Z4 in % FTP: `ZONE_BOUNDS = [55, 75, 90, 105]`;
+everything above 105 % is Z5.
 
-| Token | Light theme | Dark theme |
-|---|---|---|
-| `--unit-bg` | `#12151a` | `#050607` |
-| `--unit-fg` | `#eef0f3` | `#eceef2` |
-| `--unit-dim` | `#8e96a4` | `#8e96a4` |
-| `--unit-line` | `#2a2f38` | `#23272e` |
-| `--unit-cell` | `#1c2027` | `#13161b` |
+| Zone | Fill | Text ink (light / dark) | Workout types (`ZONE_OF`) |
+|---|---|---|---|
+| Z1 Recovery | `#7f7f7f` | `#6b6b6b` / `#a6a6a6` | recovery |
+| Z2 Base endurance | `#338cff` | `#1f74e0` / `#5aa4ff` | endurance |
+| Z3 Tempo | `#59bf59` | `#2f9a3a` / `#6fd06f` | tempo |
+| Z4 Threshold | `#ffcc3f` | `#b88a00` / `#ffcc3f` | sweet spot, threshold, FTP test |
+| Z5 VO2max | `#ff6639` | `#e4501f` / `#ff7a52` | VO2max, anaerobic, sprint |
+| Free ride | `#b4bac2` | — | blocks without a target |
 
-Used by the "Your ride" panel, the plan stats row and the logo mark.
-
-### Training zones (data colours)
-
-| Token | Zone | % FTP | Light | Dark | Types |
-|---|---|---|---|---|---|
-| `--z1` | Z1 recovery | <56 | `#8a929e` | `#8d96a3` | recovery, test, warm-up/cool-down ramps |
-| `--z2` | Z2 endurance | 56–75 | `#2f7fd8` | `#4d97ec` | endurance, build weeks, outdoor rides |
-| `--z3` | Z3 tempo | 76–90 | `#2e9e5b` | `#3fbd72` | tempo, recovery weeks |
-| `--z4` | Z4 threshold | 91–105 | `#e0b10f` | `#f0c62b` | sweet spot, threshold |
-| `--z5` | Z5 VO2max | 106–120 | `#ea6a1f` | `#ff8336` | VO2max |
-| `--z6` | Z6 anaerobic | 121–150 | `#d6332d` | `#ef4d45` | anaerobic, peak phase |
-| `--z7` | Z7 neuromuscular | >150 | `#8f2fd1` | `#b06af0` | sprint |
-| `--free` | free ride | – | `#b8bdc6` | `#4a515c` | blocks without a target |
-
-Rules:
-- Zone colours encode **intensity only**: power profiles, zone bars, type chips, the colour
-  edge on calendar cells, the goal and style mix bars.
-- A workout type always maps to the same zone colour (`ZONE_OF` in `main.js`).
-- Never use a zone colour for buttons, links or selection.
-- Text on zone colours: use `--ink` on a tinted background
-  (`color-mix(in srgb, var(--z4) 18%, transparent)`) rather than text on the solid colour.
+- **Fills** (`--z1`…`--z5`, `--free`) are for profile bars, zone tags, zone bars, chip dots
+  and the goal/style mix bars. Text on a fill is black (`.ztag`).
+- **Inks** (`--z1-ink`…`--z5-ink`) are for coloured text on the page background, such as
+  target watts in the segment info line.
+- **Never** use zone colours for buttons, status or decoration. The weekly load chart uses
+  the accent (build), soft accent (recovery) and `--line-strong` (taper), not zones.
+- The engine still classifies with seven Coggan zones; the UI shows five.
 
 ## Typography
 
 | Role | Token | Font | Use |
 |---|---|---|---|
-| Display | `--f-display` | Barlow Condensed, italic 700–800, uppercase | app name, step titles (h2), plan name, week titles, card titles, workout names in details |
-| Body | `--f-body` | Barlow 400–700 | text, buttons, inputs |
-| Data | `--f-mono` | JetBrains Mono 500–700, tabular figures | FTP, W/kg, TSS, IF, NP, durations, file names |
+| UI text | `--font` | SF Pro Text / system (Segoe UI Variable, Roboto, Noto Sans, Cantarell) | 15 px / 1.45 body |
+| Numbers | `--num` | SF Pro Rounded / `ui-rounded` (Segoe UI, Roboto elsewhere) | stats, durations, watts, TSS, tabular figures |
+| Code / paths | `--mono` | `ui-monospace`, SF Mono, Menlo | 12 px file names in `code` chips |
 
-Fallbacks: `"Arial Narrow"`, `system-ui`, `ui-monospace`. Fonts come from Google Fonts; the
-offline file falls back to system fonts without breaking layout.
+No web fonts: the offline file renders the same everywhere.
 
-Scale:
-- Step title (h2): `clamp(1.7rem, 3.2vw, 2.3rem)`, line-height 1
-- Plan name: `clamp(2rem, 4.5vw, 3rem)`
-- Big inputs (FTP, weight): 2.2 rem mono (1.7 rem on phones)
-- Readouts: 1.45–1.9 rem mono
-- Body 16 px / 1.45; hints 0.92 rem in `--muted`
-- Labels and eyebrows: 0.68–0.72 rem, uppercase, letter-spacing 0.12–0.14 em, weight 700
+| Element | Size and weight |
+|---|---|
+| `h1` | 26 px, 650 (step titles, plan name) |
+| `h2` | 19 px (dialog title) |
+| `h3` | 15 px (card titles) |
+| `.meta` | 13.5 px, muted |
+| `.small` | 13 px |
+| `.k` labels | 11 px, uppercase, letter-spacing .08em, 600, muted |
+| `.eyebrow` | 11.5 px, uppercase, .09em |
+| Stats values | 22 px `--num`, 600 |
 
-Numbers that line up in columns always use `--f-mono` with `tabular-nums`.
+Headings use `letter-spacing: -0.01em`. Numbers in columns always use tabular figures.
+
+## Spacing, radius, elevation
+
+| Category | Values |
+|---|---|
+| Spacing | 4 · 6 · 8 · 10 · 12 · 14 · 16 · 20 · 24 · 32 px |
+| Page | `.view` max-width 1120 px, padding 24 px (safe-area aware) |
+| Sections | `.section` margin-top 32 px; week headers 26 px above their list |
+| Radius | dialog 18 px · cards 14 px (`--radius`) · popover 12 px · day tiles 12 px · buttons and inputs 10 px · rows 11 px · small buttons 8 px · tags 5–6 px · pills 99 px · round buttons 50 % |
+| Elevation | `--shadow` subtle on cards (none in dark) · `--shadow-lg` for dialog, popover, toast · dark mode relies on borders |
+
+Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's top layer).
 
 ## Layout
 
-- Max width 1180 px, side gutter `max(16px, env(safe-area-inset-left/right))`.
-- Wizard: panel (`minmax(0, 1fr)`) + 300 px "Your ride" sidebar (sticky). Below 980 px the
-  sidebar moves above the panel as a compact tile row; on the result step it is hidden.
-- Spacing with `gap` on grid/flex, not margins. Panel padding `clamp(18px, 3vw, 30px)`.
-- Radii: 16 px panels, 12–14 px cards, 10 px buttons/inputs, 999 px pills.
-- Phone (≤760 px): step labels replaced by "Step n of m · Name"; Back/Next is a fixed bottom
-  bar; day tiles in two columns; calendar becomes a list with rest days hidden.
-- The body never scrolls horizontally. Charts and the calendar shrink with their container.
+### App shell
+
+```
+┌ top bar (sticky, 56 px, blurred bg, bottom border) ────────────────────────┐
+│ [icon] zwoWorkoutBuilder                                              [⚙] │
+└────────────────────────────────────────────────────────────────────────────┘
+#view (max 1120 px)
+  step tabs:  (✓) Mode  (✓) Rider  (3) Goal  (4) Week  (5) Style  (6) Result
+  wizard:     [ step card ··························· ] [ Your answers ]
+  or result:  plan head · stats · weekly load · week lists
+<dialog id="modal"> workout details · #popover settings · #toast
+```
+
+- **Top bar:** brand left (zwoTrainer icon + `zwo<b>WorkoutBuilder</b>`, links back to the
+  mode selection), Settings (gear) right. Nothing else; new options go in Settings.
+- **Step tabs** (`.tabs`): numbered steps; current = accent underline and filled number,
+  done = check in soft accent, future = disabled until a result exists. On phones only the
+  current step shows its label.
+- **Wizard:** the step card (`.card.step`) plus a 280 px sticky summary card ("Your answers").
+  Each step ends with an action row: validation hint left, Back (ghost), Next / Build
+  (primary, last).
+- **Result:** plan head (eyebrow, h1, meta; actions right), stats card, weekly load card,
+  hint, then one `.wk-head` + `.wlist` per week.
+
+### Responsive
+
+| Width | Change |
+|---|---|
+| ≤ 1100 px | workout rows drop the mini profile |
+| ≤ 980 px | summary moves above the step card as a compact grid; rows drop the duration |
+| ≤ 760 px | step labels only for the current step; day tiles in two columns; form rows wrap; plan head stacks; dialog stats in two columns |
+
+The body never scrolls horizontally (checked at 390 px).
 
 ## Components
 
-| Component | Notes |
+### Shared with zwoTrainer
+
+| Component | Spec |
 |---|---|
-| **Brand bar** | logo mark (zone bars on `--unit-bg`), app name in display face with "Workout" in accent, theme switch on the right. The logo is a link back to the start (mode selection); answers and the last result are kept |
-| **Theme switch** | three icon buttons: system, light, dark. Stored in `localStorage` (`zwo-builder-theme`), applied as `data-theme` on `<html>`; "system" removes the attribute |
-| **Step rail** | slanted bars (`skewX(-18deg)`), filled with the step's zone colour when done or current; current bar has a ring. Steps ahead are disabled until a result exists |
-| **Choice card** | border 1.5 px `--line`; selected: accent border, 3 px accent glow, round check badge top right. Title in display face, subline in `--muted`, optional art or mix bar at the bottom |
-| **Mix bar** | 6 px bar showing a distribution in zone colours (goal focus, style easy/moderate/hard) |
-| **Big input** | number in 2.2 rem mono on `--sunk`, unit in display face; accent border on focus |
-| **Slider** | 8 px track filled with accent up to the value (`--p`), white thumb with accent ring, value shown right in mono |
-| **Segmented control** | `--sunk` track; selected segment `--ink` background with `--bg` text |
-| **Chip button** | pill with a small dot in its colour (`--c`); selected: tinted background and coloured border |
-| **Switch** | 44 × 26 track, accent when on; replaces checkboxes |
-| **Day tile** | dashed when resting; solid accent border when riding, blue (`--z2`) when outdoor. Day name in display face, − / + stepper in 15-minute steps, "Outdoor" toggle |
-| **Readout row** | three bordered cells: value (mono or display) over an uppercase label |
-| **Head unit panel** | always-dark tiles with mono values; week strip of seven day cells (accent = indoor, blue = outdoor) |
-| **Primary "Next" button** | accent, display face, uppercase, parallelogram (`clip-path`) |
-| **Buttons** | primary = accent fill; secondary = panel with border; ghost = transparent. Download buttons carry a download icon |
-| **Stats row** | head-unit styling, five cells: weeks, workouts, hours, total TSS, TSS per week |
-| **Load chart** | one bar per week: build `--z2`, recovery `--z3`, taper accent; target as a dark tick; value above; phase strip below (base `--z2`, build `--z4`, peak `--z6`) |
-| **Week card** | display-face title, phase pill, hours/TSS right; seven cells. Session cell: 4 px left edge in the type's zone colour, mini power profile, duration and TSS. Rest: dashed outline. Outdoor: striped blue edge |
-| **Workout detail** | name in display face, type chip, metric readouts (time, TSS, IF, NP), power profile with watt axis and dashed FTP line, zone bar, description, file name in mono |
-| **Toast** | inverted (`--ink` on `--bg`), bottom centre, 3.5 s, `role="status"` |
+| **Button** `.btn` | 1 px `--line-strong` border, `--surface`, 600 14 px, radius 10, padding 9 × 16. `.primary` (accent fill), `.ghost` (transparent), `.sm` (13 px, radius 8), `.round` (circle). One primary per view or dialog, placed last. Download buttons carry the download icon. |
+| **Icon button** `.icon-btn` | 36 × 36, transparent, muted icon, `--surface-2` on hover; `title` + `aria-label`. |
+| **Segmented control** `.seg-ctl` | `--surface-2` track, radius 10, 3 px padding; selected item is a raised `--surface` pill. Used for experience, plan length and the theme. |
+| **Card** `.card` | `--surface`, 1 px `--line`, radius 14, padding 20, `--shadow`. |
+| **Tabs** `.tabs` | 14 px 600 muted, accent 2 px underline on the current item. Used for the wizard steps. |
+| **Workout row** `.wrow` | grid: day badge (`.wd`) · title + meta · mini profile 200 × 28 · duration · zone tag + TSS. Radius 11, hover border `--line-strong`; the open workout gets the accent border and soft gradient. Outdoor rides are a non-clickable row on `--surface-2`. Rows are focusable; Enter or Space opens. |
+| **Day badge** `.wd` | 11 px 700 accent on `--accent-soft`, radius 6 ("Tue"). Muted for outdoor rides. |
+| **Zone tag** `.ztag` | zone fill, black 11 px 650 "Z1–Z5", radius 5, min-width 26. |
+| **Zone chip** `.zchip` | zone-filter pattern: outlined, 9 px coloured dot; on = border in its colour and 16 % background. Uses the zone fill for training types and weak spots, the accent for other choices (rider type, "Pick for me"). |
+| **Badge** `.badge` | 11 px 700, radius 6; `.muted` (phase), `.warn` (time-limited), `.ok`. |
+| **Dialog** `dialog` | radius 18, `--shadow-lg`, blurred `--backdrop`, width 760. `.pv-head` with eyebrow + title left and ✕ right; actions in `.modal-actions`: Swap (ghost, left), Download .ictx, Download .zwo (primary, last). Esc and backdrop click close it. |
+| **Profile** `.pv-diagram` | `--surface-2` box, radius 12, watt axis as HTML ticks on the left (never SVG text), dashed `--ftp` line, bars stretch (`preserveAspectRatio="none"`). |
+| **Segment info** `.seg-info` | one 13.5 px line: kind · duration · target watts in zone ink (+ % FTP, zone, rpm). Updates on hover/tap; the selected bar gets an accent outline. |
+| **Zones bar / legend** | 10 px bar with 2 px gaps; legend with 9 px squares, zone name and minutes. |
+| **Popover** `.popover` | radius 12, `--shadow-lg`, 6 px padding, 260 px minimum; `.pop-title` uppercase 11 px. Settings: Appearance (Match system / Light / Dark). Closes on outside click and Esc. |
+| **Inputs** | `--surface`, 1 px `--line-strong`, radius 10, padding 8 × 12, 14 px; focus = accent border + 3 px `--accent-soft` ring. Number inputs right-aligned in `--num`. Checkboxes and ranges use `accent-color`. |
+| **Toast** `.toast` | inverted, radius 12, bottom centre, 3.5 s, short plain English. |
 
-## Interaction
+### Builder-specific
 
-- One `render()` redraws the step; inputs update the sidebar live without a full redraw.
-- The "Next" button is disabled with the reason shown beside it (e.g. "Pick at least one day").
-- Selected state is always shown twice: colour plus a second cue (check badge, ring, filled
-  background, `aria-pressed`).
-- Focus: 2 px accent outline with 2 px offset on every interactive element.
-- Motion: short transitions (0.15–0.35 s) on hover lift, rail fill and switches only; all
-  disabled under `prefers-reduced-motion`.
-- Downloads confirm with a toast naming the file.
+| Component | Spec |
+|---|---|
+| **Choice card** `.choice` | plan-card pattern for single-choice options (mode, goal, style): card padding 16, hover lift 1 px and `--line-strong` border; selected = accent border + 1 px accent ring + round check badge top right. Title `h3`, text `--text-2` 13.5 px, optional art (mode) or mix bar (goal, style) at the bottom. |
+| **Mix bar** `.zmix` | 6 px rounded bar in zone fills: which intensities a goal's key sessions use (Z3/Z4/Z5), or a style's easy/moderate/hard split (Z2/Z4/Z5). |
+| **Form rows** `.frow` | label (+ muted hint) left, control right, 1 px divider between rows. |
+| **Summary card** `.side` | "Your answers": `.stats` grid of `.k` label + 22 px value, a seven-day strip (`--accent-soft` = indoor, `--surface-3` = outdoor) and a meta line. Sticky at 76 px. |
+| **Day tile** `.day` | resting: `--surface-2`, muted day name; riding: `--surface` with accent border and ring, time stepper (− / + round buttons, 15-minute steps) and an "Outdoor" toggle badge. |
+| **Volume bar** `.pbar` | 6 px track, accent fill for available time, a 2 px `--text` marker for current hours. |
+| **Weekly load chart** `.lbars` | one bar per week: accent = build, 35 % accent = recovery, `--line-strong` = taper; target as a thin `--text` line at 50 % opacity; value above; week number and phase as text below. |
+| **Option card** `.opt` | single-workout option: eyebrow "Option n" + zone tag, title, 64 px profile on `--surface-2`, meta, small download buttons. The card opens the dialog. |
 
-## Copy
+## Icons
 
-- Plain English, short sentences, active voice. Buttons say what happens:
-  "Build my plan", "Download plan (.zip)", "Swap for another".
-- Explain training terms once where they appear (TSS on the rider step).
+Inline SVG, 24 × 24 viewBox, `stroke="currentColor"`, `stroke-width="2"`, round caps and
+joins (Lucide-like); the gear is zwoTrainer's filled glyph. 20 px in the top bar, 16 px in
+buttons. The app icon is zwoTrainer's (black tile, five zone bars).
+
+## Interaction rules
+
+- One primary action per view or dialog, always last (right).
+- Validation: the primary button is disabled and the reason shows on the left of the action
+  row ("Pick at least one day.").
+- Feedback: toasts for downloads and swaps; inline text for validation.
+- Motion: 150 ms for hover, border and opacity; 1 px lift on hover for cards; no bounces.
+  Everything is disabled under `prefers-reduced-motion`.
+- Text: plain, friendly English in sentence case. Units with a space ("250 W", "90 %"),
+  durations as `m:ss` / `h:mm:ss` (`fmtTime`) or "1h 05m" / "45 min" (`fmtDur`); day tiles
+  use the short "1h30".
 - Never mention the workout library, its coaches or plan names in the UI or in generated
   names and descriptions.
-- Units always shown: W, kg, W/kg, min/h, TSS, IF.
 
 ## Accessibility
 
-- Text contrast at least 4.5:1 on its surface in both themes; `--muted` is the lightest
-  allowed text colour.
-- All controls are real `<button>`/`<input>` elements with labels or `aria-label`;
-  toggles use `aria-pressed`, the rail uses `aria-current="step"`.
-- Charts are decorative duplicates of numbers shown as text (week TSS, metrics).
+- Icon-only buttons have `title` and `aria-label`.
+- Selection is never shown by colour alone: check badge, ring, filled number or
+  `aria-pressed`; the current step has `aria-current="step"`.
+- Text contrast ≥ 4.5:1; coloured text uses the zone ink tokens.
+- Everything is reachable by keyboard; rows and option cards are focusable and open with
+  Enter or Space; Esc closes the dialog and the popover.
+
+## Checklist for UI changes
+
+- [ ] Only tokens and zone colours; no new raw colours.
+- [ ] Same as zwoTrainer where a shared component exists; new patterns documented here.
+- [ ] Checked in light **and** dark, at 1280 px and 390 px.
+- [ ] Top bar unchanged; new options in the Settings popover.
+- [ ] Profile text is HTML, never stretched SVG text.
+- [ ] Interpolated text is escaped with `esc()`.
+- [ ] README / DESIGN.md updated if the change is user-visible or adds a pattern.

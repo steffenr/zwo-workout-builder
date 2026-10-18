@@ -21,10 +21,12 @@ Open **`dist/zwo-workout-builder.html`** in a browser.
 5. **Style** — training style (pyramidal / polarized / sweet spot / auto), intensity,
    rider type, weak spots, cadence drills
 6. **Result**
-   - Plan: load chart, week × day calendar, workout details with power profile in watts,
-     "Swap for another", **Download plan (.zip)**, and a **Download .ictx** button for the
-     open session
-   - Single: three options, each as **Download .zwo** and **Download .ictx**, or all as a .zip
+   - Plan: stats, weekly load chart, one list of workouts per week. Selecting a workout opens
+     its details (power profile in watts, segment targets on hover, time in zone) with
+     "Swap for another", **Download .ictx** and **Download .zwo**; **Download plan (.zip)**
+     at the top
+   - Single: three option cards, each with **Download .zwo** and **Download .ictx**, or all
+     as a .zip
 
 **icTrainer export.** Every workout also generates a `.ictx` file (icTrainer's XML format):
 the plan ZIP contains one `.zwo` *and* one `.ictx` per indoor session, and single workouts
@@ -45,8 +47,10 @@ Copy the `.zwo` files into Zwift's `Documents/Zwift/Workouts/<user id>/`, or imp
 `.ictx` files into icTrainer. Power targets are % of FTP, so the files work for any FTP.
 
 Clicking the logo returns to the mode selection; answers and the last result are kept.
-Answers and the chosen colour theme (system / light / dark) are stored in the browser's
-local storage only.
+The colour theme (Match system / Light / Dark) is in Settings (gear icon, top right).
+Answers and the theme are stored in the browser's local storage only.
+
+The design follows zwoTrainer's design system, see `DESIGN.md`.
 
 **Inside claude.ai** the published copy of the app can only save `.zip` files; single
 `.zwo` / `.ictx` workouts then come inside a `.zip`. The local HTML file saves them directly.
