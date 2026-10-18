@@ -86,6 +86,16 @@ plans and workouts from wizard input plus `library.json` and `rules.json`
   `node_modules` from macOS won't work in a Linux shell and vice versa).
 - Copy: short, plain English, active voice, no mention of the library.
 
+## Releases and deployment
+
+- Releases are cut only through Actions → "Prepare release" (bumps `package.json`, tags
+  `vX.Y.Z`); `release.yml` then publishes the GitHub Release. Don't bump versions or push
+  tags by hand.
+- `deploy-pages.yml` deploys every push to `develop`; only the built app goes to Pages, never
+  `data/` or the library review page.
+- Workflows run `npm test` and `npm run build`; both must pass on Linux with a clean
+  `npm ci`.
+
 ## Before finishing a change
 
 - [ ] `npm test` → `problems: 0`

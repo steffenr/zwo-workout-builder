@@ -216,3 +216,23 @@ outdoor day, comeback with far more time than current fitness, two days a week) 
 - duplicate file names
 
 `npm run check-labels` compares library labels with the coach-given titles.
+
+## Releases and deployment
+
+Three GitHub Actions workflows in `.github/workflows/` (same setup as timelinr-ts):
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `deploy-pages.yml` | push to `develop`, or manual | runs `npm test` and `npm run build`, publishes `dist/zwo-workout-builder.html` as `index.html` on GitHub Pages |
+| `prepare-release.yml` | manual: Actions → "Prepare release" → patch / minor / major | CI gate, bumps the version in `package.json` / `package-lock.json`, commits `chore(release): X`, pushes the branch and tag `vX` |
+| `release.yml` | push of a `v*` tag | tests and builds the tagged source, checks the tag matches `package.json`, creates a GitHub Release with `zwo-workout-builder.html` (and a versioned copy) attached and generated notes |
+
+One-time setup:
+
+- **Pages:** Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+- **Release token:** add a repository secret `RELEASE_PAT` (Personal Access Token with
+  Contents: Read & write, owner may push to `develop`). The default `GITHUB_TOKEN` can't be
+  used for the tag push, because pushes made with it don't start other workflows.
+
+`npm test` exits non-zero when a check reports a problem, so a broken engine stops both
+the deployment and the release.

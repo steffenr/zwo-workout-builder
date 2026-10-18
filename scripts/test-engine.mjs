@@ -164,3 +164,4 @@ for (const [cat, dur] of [['vo2max', 60], ['threshold', 75], ['sweetspot', 45], 
 console.log(`\nclassifier agrees with intended type: ${agree.yes}/${agree.yes + agree.no}`);
 mismatches.slice(0, 15).forEach((x) => console.log('  ' + x));
 console.log(`problems: ${problems}`);
+if (problems) process.exitCode = 1; // fail CI when a check found a problem
