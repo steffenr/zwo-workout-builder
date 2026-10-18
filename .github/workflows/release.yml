@@ -1,0 +1,50 @@
+name: Release
+
+# Builds the app from the tagged source and publishes a GitHub Release whenever a
+# v* tag is pushed (usually by prepare-release.yml). The release carries:
+#   - zwo-workout-builder.html            the app, one self-contained offline file
+#   - zwo-workout-builder-vX.Y.Z.html     the same file with the version in its name
+# Release notes are generated from the commits since the previous tag.
+# The default GITHUB_TOKEN is enough here (contents: write); no secrets needed.
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # previous tags for the generated release notes
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Check the tag matches package.json
+        shell: bash
+        run: |
+          PKG="v$(node -p "require('./package.json').version")"
+          if [ "$PKG" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${PKG}."
+            exit 1
+          fi
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cp dist/zwo-workout-builder.html "dist/zwo-workout-builder-${TAG}.html"
+          gh release create "$TAG" \
+            --title "Zwo Workout Builder ${TAG}" \
+            --generate-notes \
+            --verify-tag \
+            dist/zwo-workout-builder.html \
+            "dist/zwo-workout-builder-${TAG}.html"

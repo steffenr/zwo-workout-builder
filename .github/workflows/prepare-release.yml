@@ -1,0 +1,108 @@
+name: Prepare release
+
+# One-click release. Run this from Actions -> "Prepare release" -> "Run workflow"
+# and pick a semantic bump (patch/minor/major). It:
+#   1. runs the CI gate (engine tests + app build) on the current tree
+#   2. reads the current version from package.json, bumps it (semver) and syncs
+#      package.json + package-lock.json
+#   3. commits "chore(release): X", creates an annotated tag vX and pushes both
+# The tag push then triggers release.yml, which builds the app and publishes a
+# GitHub Release with dist/zwo-workout-builder.html attached.
+#
+# Requires a repository secret RELEASE_PAT: a Personal Access Token (classic or
+# fine-grained with Contents: Read & write) whose owner may push to develop. A
+# PAT is required because pushes made with the default GITHUB_TOKEN do not
+# trigger other workflows, so the tag would never start release.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Semantic version bump'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Bump version and tag
+    runs-on: ubuntu-latest
+    # releases are cut from develop only
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          # full history + tags so we can detect an existing tag and let
+          # release.yml build from the exact tagged source
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: CI gate
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+      - name: Compute next version
+        id: version
+        shell: bash
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          NEXT=$(CURRENT="${CURRENT}" BUMP="${{ github.event.inputs.bump }}" node -e '
+            const [maj, min, pat] = process.env.CURRENT.split(".").map(Number);
+            switch (process.env.BUMP) {
+              case "major": console.log(`${maj + 1}.0.0`); break;
+              case "minor": console.log(`${maj}.${min + 1}.0`); break;
+              default: console.log(`${maj}.${min}.${pat + 1}`);
+            }
+          ')
+          TAG="v${NEXT}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag ${TAG} already exists. Bump manually or choose a different increment."
+            exit 1
+          fi
+          {
+            echo "current=${CURRENT}"
+            echo "next=${NEXT}"
+            echo "tag=${TAG}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing ${CURRENT} -> ${NEXT} (tag ${TAG})"
+
+      - name: Sync version into files
+        shell: bash
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+        run: |
+          npm version "$NEXT" --no-git-tag-version --allow-same-version
+
+      - name: Commit, tag and push
+        shell: bash
+        env:
+          GIT_TOKEN: ${{ secrets.RELEASE_PAT }}
+          NEXT: ${{ steps.version.outputs.next }}
+          TAG: ${{ steps.version.outputs.tag }}
+          BRANCH: develop
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore(release): ${NEXT}"
+          git tag -a "$TAG" -m "Release ${NEXT}"
+          REMOTE="https://x-access-token:${GIT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push "$REMOTE" "HEAD:refs/heads/${BRANCH}"
+          git push "$REMOTE" "$TAG"
+          echo "Pushed ${BRANCH} and tag ${TAG}; release.yml will publish the GitHub Release."
