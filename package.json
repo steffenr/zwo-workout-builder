@@ -1,0 +1,16 @@
+{
+  "type": "module",
+  "name": "zwo-workout-builder",
+  "private": true,
+  "scripts": {
+    "index": "node scripts/build-index.mjs .. data && node scripts/derive-rules.mjs data",
+    "test": "node scripts/test-engine.mjs data",
+    "check-labels": "node scripts/check-labels.mjs data/catalog.json 5",
+    "review": "node scripts/build-browser.mjs data dist/library-index.html",
+    "build": "node scripts/build-app.mjs data dist/zwo-workout-builder.html",
+    "all": "npm run index && npm test && npm run review && npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.1"
+  }
+}
