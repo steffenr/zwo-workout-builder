@@ -122,7 +122,9 @@ function thresholdFormats(x, f) {
   for (const k of [2, 3, 4]) {
     for (let reps = 2; reps <= 5; reps++) {
       const unit = [];
-      for (let i = 0; i < k; i++) unit.push(steady(m(2), lerp(0.92, 0.95, x)), steady(m(1), lerp(1.04, 1.05, x)));
+      // unders at FTP, overs clearly above it: the surges create lactate that has to be
+      // cleared while holding threshold (overs at 104-105 % gave almost no surge)
+      for (let i = 0; i < k; i++) unit.push(steady(m(2), lerp(0.955, 0.97, x)), steady(m(1), lerp(1.08, 1.1, x)));
       res.push({ format: 'over-unders', label: `Over-Unders ${reps}x${k * 3}min`, blocks: series(reps, unit, m(4), 0.55), workSec: reps * k * m(3) });
     }
   }
