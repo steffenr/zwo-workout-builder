@@ -36,7 +36,7 @@ plans and workouts from wizard input plus `library.json` and `rules.json`
    library workouts must never appear in generated names, descriptions, file names, the UI
    or the app bundle. Library workouts may only be used for their power structure and
    metrics. `build-app.mjs` strips everything except `primary, secondary, level, flags,
-   workMin, durMin, blocks` (plus a `ramp` marker for the FTP ramp test). Series names in
+   workMin, durMin, blocks`. Series names in
    `naming.js` must not match any library title; check after editing `SERIES`:
    ```sh
    node -e 'const t=require("./data/library.json").map(w=>w.title.toLowerCase());import("./src/engine/naming.js").then(({SERIES})=>{for(const l of Object.values(SERIES))for(const n of l)if(t.some(x=>x.includes(n.toLowerCase())))console.log("clash",n)})'

@@ -169,6 +169,12 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
   efforts of ≥ 4 / 3 min, anaerobic efforts with recoveries ≥ 1.5× the effort, sprints at
   ≥ 170 % FTP with ≥ 2 min recovery. Hard sessions keep a library warm-up only if it lasts
   ≥ 8 min; otherwise a 10 min ramp is used.
+- **FTP ramp test** (`rampTest` in `compose.js`) is built by the app, not taken from the
+  library (the library's ramp-test files are only placeholders for a test the original platform
+  runs internally): 8 min warm-up ramp + 2 min easy, 1 min steps from 50 % FTP rising 6 % per
+  minute up to 152 %, ridden until the target can no longer be held, 12 min cool-down; 40 min in
+  total. The description explains the result: new FTP ≈ 75 % of the best 1-minute power (about
+  the last full step).
 - **Sprints** are written as `<MaxEffort>` blocks (all-out, ERG released, shown as "MAX"),
   both in sprint sessions and inside long rides; load and classification count them at an
   assumed 200 % FTP (150 % for efforts over 30 s).

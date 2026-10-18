@@ -1,7 +1,7 @@
 // plan.js — athlete model, periodization and weekly session planning.
 import { makeRng, clamp, hash } from './rng.js';
 import { makeWorkout } from './workout.js';
-import { HARD, CATEGORY_INFO } from './compose.js';
+import { HARD, CATEGORY_INFO, rampTestMinutes } from './compose.js';
 import {
   workoutName, describe, fileName, slug,
 } from './naming.js';
@@ -323,6 +323,8 @@ export function buildPlan(input, ctx) {
     // durations
     for (const s of sessions) {
       if (s.outdoor) continue;
+      // the ramp test has a fixed protocol; it is not stretched to fill the slot
+      if (s.role === 'test') { s.dur = round5(rampTestMinutes()); continue; }
       let dur = s.minutes;
       if (s.role === 'recovery') dur = Math.min(dur, 45);
       if (s.role === 'easy') dur = Math.min(dur, 60 + 15 * ath.level + (weakEndurance ? 30 : 0));

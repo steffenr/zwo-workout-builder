@@ -15,7 +15,6 @@ const library = JSON.parse(fs.readFileSync(path.join(dir, 'library.json'), 'utf8
   .map((w, i) => ({
     id: i, primary: w.primary, secondary: w.secondary, level: w.level, flags: w.flags,
     workMin: w.workMin, durMin: w.durMin, blocks: w.blocks,
-    ...(w.primary === 'test' && /^FTP Ramp Test$/i.test(w.title) ? { ramp: true } : {}),
   }));
 const rules = JSON.parse(fs.readFileSync(path.join(dir, 'rules.json'), 'utf8'));
 delete rules.typeTransitions;

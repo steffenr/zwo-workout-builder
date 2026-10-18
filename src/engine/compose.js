@@ -13,7 +13,7 @@ export const CATEGORY_INFO = {
   vo2max: { label: 'VO2max', purpose: 'Hard intervals at 106–125% FTP: raise maximal aerobic power and the ceiling for your FTP.' },
   anaerobic: { label: 'Anaerobic', purpose: 'Short, very hard efforts above 120% FTP: punch for short climbs, attacks and bridging gaps.' },
   sprint: { label: 'Sprint', purpose: 'Maximal neuromuscular efforts with full recovery: top-end power and acceleration.' },
-  test: { label: 'FTP Test', purpose: 'Fitness test to set or update your FTP. Ride it fresh.' },
+  test: { label: 'FTP Test', purpose: 'Ramp test to set or update your FTP. Ride it fresh: easy or rest day before, no hard session the day after.' },
 };
 
 export const HARD = new Set(['threshold', 'vo2max', 'anaerobic', 'sprint']);
@@ -332,5 +332,26 @@ export function compose(req) {
   ];
   return { blocks, label: best.label, format: best.format, category, workSec: best.workSec, doseMin: dose };
 }
+
+// ---------------------------------------------------------------- FTP ramp test
+/** Ramp test protocol, shared by the workout and its description. */
+export const RAMP_TEST = { start: 0.5, step: 0.06, steps: 18, stepSec: 60, warmMin: 10, coolMin: 12 };
+
+/**
+ * FTP ramp test, built from scratch (the library's ramp test files are only placeholders for a
+ * test that the original platform runs internally): 8 min warm-up ramp + 2 min easy, then 1 min
+ * steps from 50 % FTP rising 6 % per minute up to 152 %, ridden until the target can no longer be
+ * held, then cool-down. New FTP ≈ 75 % of the best 1-minute power (about the last full step).
+ * 40 min in total; most riders stop after 12–16 steps.
+ */
+export function rampTest() {
+  const T = RAMP_TEST;
+  const blocks = [warmup(m(8), 0.45, 0.7), steady(m(2), 0.55)];
+  for (let i = 0; i < T.steps; i++) blocks.push(steady(T.stepSec, T.start + i * T.step));
+  blocks.push(cooldown(m(T.coolMin), 0.55, 0.4));
+  return { blocks, label: 'FTP Ramp Test', format: 'ramp-test', category: 'test', workSec: 0, doseMin: 0 };
+}
+
+export const rampTestMinutes = () => RAMP_TEST.warmMin + (RAMP_TEST.steps * RAMP_TEST.stepSec) / 60 + RAMP_TEST.coolMin;
 
 export { fmt };

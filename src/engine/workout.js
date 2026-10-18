@@ -1,9 +1,9 @@
 // workout.js — one entry point that produces a finished workout (library-based or composed) with metrics.
 import { computeMetrics } from '../core/zwo.js';
 import { mergeSegments, compress, describeStructure } from '../core/classify.js';
-import { compose } from './compose.js';
-import { fromLibrary, rampTest } from './library.js';
-import { blocksDuration, steady } from './blocks.js';
+import { compose, rampTest } from './compose.js';
+import { fromLibrary } from './library.js';
+import { blocksDuration } from './blocks.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 
@@ -30,7 +30,7 @@ export function summarize(blocks) {
  */
 export function makeWorkout(ctx, req) {
   let made = null;
-  if (req.category === 'test') made = rampTest(ctx.library);
+  if (req.category === 'test') made = rampTest();
   const libAllowed = req.category !== 'endurance' && req.category !== 'recovery';
   if (!made && libAllowed && req.source !== 'composed') {
     const tryLib = req.source === 'library' || req.rng() < 0.5;
@@ -41,11 +41,6 @@ export function makeWorkout(ctx, req) {
     }
   }
   if (!made) made = compose({ ...req, rules: ctx.rules });
-  // a test is short: ride easy afterwards to fill the slot
-  if (req.category === 'test') {
-    const left = req.durMin * 60 - blocksDuration(made.blocks);
-    if (left >= 300) made = { ...made, blocks: [...made.blocks, steady(left, 0.55)] };
-  }
   const durMin = Math.round(blocksDuration(made.blocks) / 60);
   return {
     category: req.category,

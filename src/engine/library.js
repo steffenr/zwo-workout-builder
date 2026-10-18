@@ -145,14 +145,3 @@ export function fromLibrary(library, req) {
     source: { id: w.id },
   };
 }
-
-/** The library's FTP ramp test, unchanged. */
-export function rampTest(library) {
-  const t = library.find((w) => w.primary === 'test' && (w.ramp || /^FTP Ramp Test$/i.test(w.title || ''))) ||
-    library.find((w) => w.primary === 'test');
-  if (!t) return null;
-  return {
-    blocks: decodeBlocks(t.blocks), label: 'FTP Ramp Test', format: 'test',
-    source: { id: t.id },
-  };
-}
