@@ -2,7 +2,7 @@
 import {
   decodeBlocks, splitWorkout, blocksDuration, warmup, cooldown, steady,
 } from './blocks.js';
-import { workDose, CATEGORY_INFO } from './compose.js';
+import { workDose, CATEGORY_INFO, HARD } from './compose.js';
 import { toSegments, toTimeline, detectEfforts } from '../core/zwo.js';
 
 const m = (min) => Math.round(min * 60);
@@ -14,9 +14,37 @@ function prep(entry) {
     const blocks = decodeBlocks(entry.blocks);
     const parts = splitWorkout(blocks);
     p = { ...parts, mainSec: blocksDuration(parts.main), warmSec: blocksDuration(parts.warm), coolSec: blocksDuration(parts.cool) };
+    p.structureOk = structureFits(parts.main, entry.primary);
     prepared.set(entry, p);
   }
   return p;
+}
+
+const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; };
+
+/**
+ * Does the main set train what its type promises? The classifier labels by work minutes,
+ * so e.g. 8x1min at FTP counts as "threshold" and 30/30s at 90 % as "sweet spot".
+ * - sweet spot / threshold: most time at or above the band comes in efforts of >= 4 / 3 min
+ * - anaerobic: recoveries at least 1.5x the effort (shorter rests turn it into lactate tolerance)
+ * - sprint: near-maximal targets (>= 170 %) with >= 2 min recovery
+ */
+export function structureFits(main, category) {
+  if (!['sweetspot', 'threshold', 'anaerobic', 'sprint'].includes(category)) return true;
+  const { power } = toTimeline(toSegments(main));
+  if (category === 'sweetspot' || category === 'threshold') {
+    const [thr, minDur] = category === 'sweetspot' ? [0.86, 240] : [0.9, 180];
+    const eff = detectEfforts(power, thr);
+    const total = eff.reduce((a, e) => a + e.dur, 0);
+    const long = eff.filter((e) => e.dur >= minDur).reduce((a, e) => a + e.dur, 0);
+    return total > 0 && long >= 0.6 * total;
+  }
+  if (category === 'anaerobic') {
+    const eff = detectEfforts(power, 1.2).filter((e) => e.dur >= 15);
+    return eff.length > 0 && median(eff.map((e) => e.restAfter / e.dur)) >= 1.5;
+  }
+  const eff = detectEfforts(power, 1.5).filter((e) => e.dur <= 30);
+  return eff.length > 0 && median(eff.map((e) => e.max)) >= 1.7 && median(eff.map((e) => e.restAfter)) >= 120;
 }
 
 const shortDur = (sec) => (sec >= 60 ? `${+(sec / 60).toFixed(1).replace(/\.0$/, '')}min` : `${Math.round(sec)}s`);
@@ -78,7 +106,9 @@ export function fromLibrary(library, req) {
     if (w.primary !== category || req.used?.has(w.id)) continue;
     if (w.level > (req.maxLevel ?? 5)) continue;
     const p = prep(w);
-    if (!p.main.length || p.mainSec + m(9) > target || p.mainSec < target * 0.45) continue;
+    if (!p.structureOk) continue;
+    const hard = HARD.has(category);
+    if (!p.main.length || p.mainSec + m(hard ? 15 : 9) > target || p.mainSec < target * 0.45) continue;
     const work = w.workMin[category] || 0;
     let score = Math.abs(work - dose) / dose + 0.35 * Math.abs(w.level - (req.targetLevel ?? 3)) + rng() * 0.3;
     for (const fl of wanted) if (w.flags.includes(fl)) score -= 0.2;
@@ -87,11 +117,13 @@ export function fromLibrary(library, req) {
   if (!best || best.score > (req.maxScore ?? 0.8)) return null;
 
   const { w, p } = best;
-  let warm = p.warmSec >= m(4) && p.warmSec <= m(20) ? p.warm : [warmup(m(10), 0.45, 0.7)];
+  // hard sessions need >= 8 min of warm-up before the first effort
+  const hard = HARD.has(category);
+  let warm = p.warmSec >= m(hard ? 8 : 4) && p.warmSec <= m(20) ? p.warm : [warmup(m(10), 0.45, hard ? 0.75 : 0.7)];
   let cool = p.coolSec >= m(3) && p.coolSec <= m(15) ? p.cool : [cooldown(m(6), 0.65, 0.45)];
   let rest = target - blocksDuration(warm) - p.mainSec - blocksDuration(cool);
   if (rest < 0) {
-    warm = [warmup(m(5), 0.45, 0.65)];
+    warm = [warmup(m(hard ? 8 : 5), 0.45, hard ? 0.75 : 0.65)];
     cool = [cooldown(m(4), 0.6, 0.45)];
     rest = target - blocksDuration(warm) - p.mainSec - blocksDuration(cool);
   }

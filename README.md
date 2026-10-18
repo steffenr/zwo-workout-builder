@@ -154,6 +154,11 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
   sessions), the interval format whose work time is closest to the target dose, aerobic
   filler, cool-down. The target dose comes from the library's work minutes per type and
   duration (`rules.workDoseMin`).
+- **Library structure filter** (`structureFits` in `library.js`): a library main set is only
+  used when it trains what its type promises — sweet spot / threshold with most work in
+  efforts of ≥ 4 / 3 min, anaerobic efforts with recoveries ≥ 1.5× the effort, sprints at
+  ≥ 170 % FTP with ≥ 2 min recovery. Hard sessions keep a library warm-up only if it lasts
+  ≥ 8 min; otherwise a 10 min ramp is used.
 
 ### Names
 
