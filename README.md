@@ -147,7 +147,11 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
   adjacent) and not on the day after the long ride (strongly penalised; advanced riders
   may get it as a weekend block when no other day fits); the day after a key session
   is a recovery ride for less experienced riders. Sessions shrink when a week overshoots its
-  load target; available time caps the load ("time-limited").
+  load target; available time caps the load ("time-limited"). The cap is the TSS of the
+  week's sessions generated at full slot length (plus room for easy rides to grow back to the
+  offered time), so the target line never promises load the schedule cannot deliver, and the
+  next week ramps from the capped value. When a load week falls short of its target, easy
+  rides grow back towards the minutes the rider offered.
 - **Key session types** rotate through a list per goal and phase, changed by style
   (polarized: threshold/VO2 instead of tempo/sweet spot; sweet spot: sub-threshold until the
   peak) and weak spots (added in build and peak). Climbing, racing and gravel keep VO2max

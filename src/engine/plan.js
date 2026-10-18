@@ -351,10 +351,22 @@ export function buildPlan(input, ctx) {
     };
     sessions.forEach(gen);
     const total = () => sessions.reduce((a, s) => a + (s.outdoor ? s.estTss : s.workout.metrics.tss), 0);
-    // what the available time allows: structured indoor riding ≈ 65 TSS/h at most
-    const maxPossible = sessions.reduce((a, s) => a + (s.outdoor ? s.estTss : (s.dur / 60) * 65), 0);
+    // What the available time allows: the sessions were just generated at full slot length,
+    // so their TSS is what this week can deliver; easy rides may still grow to the time the
+    // rider offered (~45 TSS/h). A flat 65 TSS/h estimate made targets the plan never reached.
+    const maxPossible = total() + sessions.reduce((a, s) => a + (!s.outdoor && s.role === 'easy' ? ((s.minutes - s.dur) / 60) * 45 : 0), 0);
     const cappedByTime = target > maxPossible;
     target = Math.min(target, maxPossible);
+    if (kind === 'load') { lastLoad = target; loadHistory[loadHistory.length - 1] = target; }
+    // Under target with time to spare: easy rides grow back towards the time the rider offered
+    // (they were capped at 60 + 15 × level minutes), so load can still progress.
+    if (kind === 'load') {
+      for (let it = 0; it < 12 && total() < target * 0.95; it++) {
+        const grow = sessions.filter((x) => !x.outdoor && x.role === 'easy' && x.dur < x.minutes);
+        if (!grow.length) break;
+        for (const x of grow) { x.dur = Math.min(x.minutes, round5(x.dur + 15)); gen(x); }
+      }
+    }
     const light = kind !== 'load';
     const floors = light ? { easy: 30, recovery: 30, long: 40, key: 30, test: 0 } : { easy: 40, recovery: 30, long: 60, key: 45, test: 0 };
     const order = ['easy', 'long', 'key'];
