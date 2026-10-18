@@ -6,8 +6,26 @@ import { CATEGORY_INFO } from '../engine/compose.js';
 import { toZwo, makeZip } from '../engine/export.js';
 import { slug } from '../engine/naming.js';
 
-const DATA = JSON.parse(document.getElementById('engine-data').textContent);
-const ctx = { library: DATA.library, rules: DATA.rules };
+// Engine data is embedded as base64-encoded gzip JSON in the page
+// (compressed at build time to keep the offline file small).
+// Falls back to plain JSON for uncompressed builds.
+async function loadData() {
+  const el = document.getElementById('engine-data');
+  const raw = el ? el.textContent.trim() : '';
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw); // uncompressed
+  } catch { /* base64 gzip below */ }
+  const bin = atob(raw);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const decompressed = new Response(bytes).body.pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(decompressed).text());
+}
+const ctx = { library: [], rules: {} };
+const dataReady = loadData()
+  .then((d) => { ctx.library = d?.library || []; ctx.rules = d?.rules || {}; })
+  .catch((e) => console.error('Failed to load engine data:', e));
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ZONE_OF = { recovery: 'z1', endurance: 'z2', tempo: 'z3', sweetspot: 'z4', threshold: 'z4', vo2max: 'z5', anaerobic: 'z6', sprint: 'z7', test: 'z1' };
@@ -653,11 +671,13 @@ $('#next').addEventListener('click', () => {
   const names = steps();
   if (names[step + 1] === 'Result') {
     $('#next').textContent = 'Building…';
-    setTimeout(() => { seedSalt = 0; generate(); step++; render(); window.scrollTo({ top: 0 }); }, 20);
+    setTimeout(() => { seedSalt = 0; dataReady.then(() => { generate(); step++; render(); window.scrollTo({ top: 0 }); }); }, 20);
     return;
   }
   step++; render(); window.scrollTo({ top: 0 });
 });
 
 applyTheme();
-render();
+dataReady.then(() => {
+  render();
+});
