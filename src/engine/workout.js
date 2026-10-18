@@ -42,6 +42,12 @@ export function makeWorkout(ctx, req) {
   }
   if (!made) made = compose({ ...req, rules: ctx.rules });
   const durMin = Math.round(blocksDuration(made.blocks) / 60);
+  const summary = summarize(made.blocks);
+  // the ramp test is ridden to failure: TSS/IF/NP describe a typical finish, not every step
+  if (made.typicalBlocks) {
+    const t = summarize(made.typicalBlocks).metrics;
+    summary.metrics = { ...summary.metrics, tss: t.tss, IF: t.IF, np: t.np };
+  }
   return {
     category: req.category,
     role: req.role,
@@ -50,7 +56,7 @@ export function makeWorkout(ctx, req) {
     format: made.format,
     source: made.source || null,
     blocks: made.blocks,
-    ...summarize(made.blocks),
+    ...summary,
     structure: describeStructure(compress(mergeSegments(computeMetrics({ blocks: made.blocks }).segs)), 4),
   };
 }

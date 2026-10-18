@@ -335,7 +335,7 @@ export function compose(req) {
 
 // ---------------------------------------------------------------- FTP ramp test
 /** Ramp test protocol, shared by the workout and its description. */
-export const RAMP_TEST = { start: 0.5, step: 0.06, steps: 18, stepSec: 60, warmMin: 10, coolMin: 12 };
+export const RAMP_TEST = { start: 0.5, step: 0.06, steps: 18, stepSec: 60, warmMin: 10, coolMin: 12, typicalTop: 1.34 };
 
 /**
  * FTP ramp test, built from scratch (the library's ramp test files are only placeholders for a
@@ -346,10 +346,14 @@ export const RAMP_TEST = { start: 0.5, step: 0.06, steps: 18, stepSec: 60, warmM
  */
 export function rampTest() {
   const T = RAMP_TEST;
-  const blocks = [warmup(m(8), 0.45, 0.7), steady(m(2), 0.55)];
-  for (let i = 0; i < T.steps; i++) blocks.push(steady(T.stepSec, T.start + i * T.step));
-  blocks.push(cooldown(m(T.coolMin), 0.55, 0.4));
-  return { blocks, label: 'FTP Ramp Test', format: 'ramp-test', category: 'test', workSec: 0, doseMin: 0 };
+  const warm = [warmup(m(8), 0.45, 0.7), steady(m(2), 0.55)];
+  const steps = [];
+  for (let i = 0; i < T.steps; i++) steps.push(steady(T.stepSec, T.start + i * T.step));
+  const cool = [cooldown(m(T.coolMin), 0.55, 0.4)];
+  // Load is estimated for a typical finish (last full step ≈ 134 % FTP, i.e. FTP unchanged),
+  // not for riding every step, which only riders with a far too low FTP would do.
+  const typicalBlocks = [...warm, ...steps.filter((b) => b.p <= T.typicalTop + 1e-9), ...cool];
+  return { blocks: [...warm, ...steps, ...cool], typicalBlocks, label: 'FTP Ramp Test', format: 'ramp-test', category: 'test', workSec: 0, doseMin: 0 };
 }
 
 export const rampTestMinutes = () => RAMP_TEST.warmMin + (RAMP_TEST.steps * RAMP_TEST.stepSec) / 60 + RAMP_TEST.coolMin;

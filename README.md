@@ -174,7 +174,12 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
   runs internally): 8 min warm-up ramp + 2 min easy, 1 min steps from 50 % FTP rising 6 % per
   minute up to 152 %, ridden until the target can no longer be held, 12 min cool-down; 40 min in
   total. The description explains the result: new FTP ≈ 75 % of the best 1-minute power (about
-  the last full step).
+  the last full step). TSS/IF/NP are given for a typical finish (last full step ≈ 134 %).
+- **FTP test placement** (optional): in week 1 and, without an event, in the last week of
+  plans with ≥ 6 weeks, which becomes a lighter test week (like the library's plans, whose
+  final test week carries 30–70 % less load). The test takes one key slot and goes on an
+  indoor day after a rest day (or an easy ride, never right after the long ride): early in
+  week 1, late in the final week. No key session on the day before or after it.
 - **Sprints** are written as `<MaxEffort>` blocks (all-out, ERG released, shown as "MAX"),
   both in sprint sessions and inside long rides; load and classification count them at an
   assumed 200 % FTP (150 % for efforts over 30 s).

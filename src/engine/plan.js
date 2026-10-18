@@ -156,22 +156,49 @@ function phaseOf(w, N, goal) {
   return f < 0.4 ? 'base' : f < 0.8 ? 'build' : 'peak';
 }
 
-export function weekTypes(N, hasEvent) {
+export function weekTypes(N, hasEvent, testAtEnd = false) {
   const out = [];
   for (let w = 1; w <= N; w++) {
     if (hasEvent && w === N) out.push('taper');
     else if (w % 4 === 0 && !(hasEvent && w === N - 1 && N > 4)) out.push('recovery');
+    // the closing FTP test needs fresh legs: the last week becomes a lighter test week
+    // (as in the library's plans, where the final test week carries 30–70 % less load)
+    else if (testAtEnd && !hasEvent && w === N && N >= 6 && out[w - 2] !== 'recovery') out.push('recovery');
     else out.push('load');
   }
   return out;
+}
+
+/**
+ * Day for the FTP test: an indoor day long enough for the protocol, not the long ride, ideally
+ * after a rest day (or at least an easy one; never right after the long ride). The opening
+ * test goes early in the week, the closing test late, when the rider is freshest.
+ */
+function chooseTestDay(indoor, allDays, longDay, late) {
+  const byDay = new Map(allDays.map((d) => [d.day, d]));
+  const prevDay = (d) => ((d + 5) % 7) + 1;
+  let best = null;
+  for (const s of indoor) {
+    if (s.day === longDay || s.minutes < rampTestMinutes()) continue;
+    const prev = byDay.get(prevDay(s.day));
+    let sc = 0;
+    if (!prev) sc += 3;
+    else if (prev.day === longDay) sc -= 4;
+    else if (prev.outdoor) sc -= 2;
+    else sc += 1; // an easy ride: key sessions are kept off the days next to the test
+    if (nextDay(s.day) === longDay) sc -= 0.5;
+    sc += (late ? 0.3 : -0.3) * s.day;
+    if (!best || sc > best.sc) best = { sc, day: s.day };
+  }
+  return best ? best.day : null;
 }
 
 // Day numbers 1..7 (Mon..Sun) wrap around: Sunday's long ride is followed by Monday.
 const nextDay = (d) => (d % 7) + 1;
 const adjacent = (a, b) => nextDay(a) === b || nextDay(b) === a;
 
-function chooseKeyDays(indoor, K, longDay, level = 3) {
-  const cands = indoor.filter((s) => s.day !== longDay);
+function chooseKeyDays(indoor, K, longDay, level = 3, testDay = null) {
+  const cands = indoor.filter((s) => s.day !== longDay && s.day !== testDay);
   // A key session on legs tired from the long ride loses quality and stacks fatigue;
   // only very experienced riders get it as a deliberate weekend block.
   const afterLongPenalty = level >= 4 ? 3 : 6;
@@ -191,6 +218,8 @@ function chooseKeyDays(indoor, K, longDay, level = 3) {
       }
     }
     for (const s of sel) if (s.minutes < 45) sc -= 3;
+    // no hard session the day before the FTP test (it needs fresh legs) or the day after it
+    if (testDay) for (const d of days) if (adjacent(d, testDay)) sc -= 8;
     if (!best || sc > best.sc) best = { sc, sel };
   };
   combos(cands, Math.min(K, cands.length));
@@ -214,7 +243,7 @@ export function buildPlan(input, ctx) {
   const rng = makeRng(seed);
   const hasEvent = !!input.eventDate;
   const N = clamp(input.weeks || 8, 2, 24);
-  const types = weekTypes(N, hasEvent);
+  const types = weekTypes(N, hasEvent, !!input.includeTest);
   const days = [...(input.days || [])].filter((d) => d.minutes > 0).sort((a, b) => a.day - b.day);
   const used = new Set();
   const lastFormat = {};
@@ -270,8 +299,10 @@ export function buildPlan(input, ctx) {
     const longest = [...days].sort((a, b) => b.minutes - a.minutes || b.day - a.day)[0];
     const hasLong = longest && (days.length >= 3 || goal.longRide) && !(indoor.length <= K && !longest.outdoor);
     const longDay = hasLong ? longest.day : null;
-    const keyDays = chooseKeyDays(indoor, K, longDay, ath.level);
     const testWeek = input.includeTest && (w === 1 || (!hasEvent && w === N && N >= 6));
+    const testDay = testWeek ? chooseTestDay(indoor, days, longDay, w !== 1) : null;
+    // the test takes one of the week's key slots
+    const keyDays = chooseKeyDays(indoor, testDay ? Math.max(0, K - 1) : K, longDay, ath.level, testDay);
 
     let sessions = days.map((d) => {
       if (d.outdoor) {
@@ -280,10 +311,11 @@ export function buildPlan(input, ctx) {
         return { day: d.day, minutes: d.minutes, role: d.day === longDay ? 'long' : 'outdoor', outdoor: true, category: 'endurance', estTss: Math.round((d.minutes / 60) * 55 * easyFactor) };
       }
       let role;
-      if (keyDays.includes(d.day)) role = 'key';
+      if (d.day === testDay) role = 'test';
+      else if (keyDays.includes(d.day)) role = 'key';
       else if (d.day === longDay) role = 'long';
       else {
-        const afterKey = keyDays.includes(d.day - 1);
+        const afterKey = keyDays.includes(d.day - 1) || d.day - 1 === testDay;
         role = afterKey && (ath.level <= 3 || ath.intensity <= 2 || kind !== 'load') ? 'recovery' : 'easy';
       }
       return { day: d.day, minutes: d.minutes, role };
@@ -312,12 +344,9 @@ export function buildPlan(input, ctx) {
         thisWeek.add(cat);
         s.category = cat;
         ki++;
-      } else if (s.role === 'recovery') s.category = 'recovery';
+      } else if (s.role === 'test') s.category = 'test';
+      else if (s.role === 'recovery') s.category = 'recovery';
       else s.category = 'endurance';
-    }
-    if (testWeek) {
-      const t = sessions.find((s) => !s.outdoor && s.role !== 'long' && s.minutes >= 30);
-      if (t) { t.category = 'test'; t.role = 'test'; }
     }
 
     // durations

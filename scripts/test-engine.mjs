@@ -47,6 +47,14 @@ for (const sc of scenarios) {
     // back-to-back hard
     const hardDays = wk.sessions.filter((s) => HARD.has(s.category)).map((s) => s.day);
     for (let i = 1; i < hardDays.length; i++) if (hardDays[i] - hardDays[i - 1] === 1) console.log(`  · back-to-back hard days in week ${wk.week}`);
+    // FTP test: no hard session on the day before or after it, not right after the long ride
+    for (const t of wk.sessions.filter((s) => s.category === 'test')) {
+      const prev = wk.sessions.find((x) => x.day === ((t.day + 5) % 7) + 1);
+      const next = wk.sessions.find((x) => x.day === (t.day % 7) + 1);
+      if (prev && !prev.outdoor && HARD.has(prev.category)) warn(`W${wk.week}: hard session the day before the FTP test`);
+      if (next && !next.outdoor && HARD.has(next.category)) warn(`W${wk.week}: hard session the day after the FTP test`);
+      if (prev && prev.role === 'long') warn(`W${wk.week}: FTP test right after the long ride`);
+    }
     // no key session on the day after a long ride (>= 150 min) for levels <= 3
     if (plan.athlete.level <= 3) {
       for (const s of wk.sessions) {
@@ -82,7 +90,8 @@ for (const sc of scenarios) {
     const m = computeMetrics(parsed);
     const c = classify(parsed, m);
     const s = plan.weeks.flatMap((w) => w.sessions).find((x) => x.workout && f.name.endsWith(x.workout.file));
-    if (Math.abs(m.tss - s.workout.metrics.tss) > 1) warn(`round-trip TSS differs for ${f.name}`);
+    // the ramp test's TSS is estimated for a typical finish, not for the full file
+    if (s.category !== 'test' && Math.abs(m.tss - s.workout.metrics.tss) > 1) warn(`round-trip TSS differs for ${f.name}`);
     if (s.category === 'test') continue;
     const ok = c.primary === s.category || c.secondary === s.category || (s.category === 'recovery' && c.primary === 'endurance');
     agree[ok ? 'yes' : 'no']++;
