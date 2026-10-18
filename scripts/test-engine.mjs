@@ -6,6 +6,7 @@ import { parseZwo, computeMetrics } from '../src/core/zwo.js';
 import { classify } from '../src/core/classify.js';
 import { makeZip } from '../src/engine/export.js';
 import { HARD } from '../src/engine/compose.js';
+import { blocksDuration } from '../src/engine/blocks.js';
 
 const dir = process.argv[2] || 'data';
 const ctx = {
@@ -28,6 +29,51 @@ const scenarios = [
   { label: 'Time-crunched sweet spot, 2 days', ftp: 260, weight: 80, hours: 3, years: 1, intensity: 3, goal: 'ftp', weeks: 6,
     days: [{ day: 3, minutes: 45 }, { day: 6, minutes: 60 }], style: 'sweetspot', source: 'composed' },
 ];
+
+// ICTX file checks: well-formed envelope, balanced tags, leg durations equal the
+// block durations, level badges and the effort classification stay consistent.
+function checkIctx(file, blocks, order) {
+  const xml = file.data;
+  const fails = [];
+  if (!xml.startsWith('\uFEFF<?xml version="1.0" ?>')) fails.push('missing BOM/xml decl');
+  for (const t of ['icTrainer', 'icTrainerExercise', 'sequence', 'leg']) {
+    const open = (xml.match(new RegExp(`<${t}>`, 'g')) || []).length;
+    const close = (xml.match(new RegExp(`</${t}>`, 'g')) || []).length;
+    if (open !== close) fails.push(`unbalanced <${t}> (${open}/${close})`);
+  }
+  if ((xml.match(/<icTrainerExercise>/g) || []).length !== 1) fails.push('not exactly one exercise');
+  const doMatch = xml.match(/<displayOrder>(\d+)<\/displayOrder>/);
+  if (!doMatch || +doMatch[1] !== order) fails.push(`displayOrder ${doMatch?.[1]} != ${order}`);
+  const seqXml = [...xml.matchAll(/<sequence>[\s\S]*?<\/sequence>/g)].map((m) => m[0]);
+  // leg durations (times loops) must equal the block duration
+  const total = seqXml.reduce((sum, s) => {
+    const loops = +s.match(/<loops>(\d+)<\/loops>/)[1];
+    const secs = [...s.matchAll(/<duration>(\d+):(\d{2})<\/duration>/g)].reduce((a, x) => a + +x[1] * 60 + +x[2], 0);
+    return sum + secs * loops;
+  }, 0);
+  if (total !== blocksDuration(blocks)) fails.push(`leg total ${total}s != blocks ${blocksDuration(blocks)}s`);
+  // level badges: <55 XS, <80 S, <106 L, else XL (ramps count at the midpoint)
+  for (const m of xml.matchAll(/<leg>[\s\S]*?<\/leg>/g)) {
+    const leg = m[0];
+    const lvl = leg.match(/<level>(\w+)<\/level>/)[1];
+    const r = +leg.match(/<levelRatio>(\d+)<\/levelRatio>/)[1];
+    const re = leg.match(/<levelRatioEnd>(\d+)<\/levelRatioEnd>/);
+    const mid = re ? Math.round((r + +re[1]) / 2) : r;
+    const exp = mid < 55 ? 'XS' : mid < 80 ? 'S' : mid < 106 ? 'L' : 'XL';
+    if (lvl !== exp) fails.push(`level ${lvl} != ${exp} (mid ${mid})`);
+  }
+  const et = xml.match(/<exerciseType>(\w+)<\/exerciseType>/)[1];
+  if (!['RECOM', 'ENDURANCE', 'SPEED', 'POWER', 'HIIT'].includes(et)) fails.push(`exerciseType ${et} not in allowed set`);
+  // workoutStruct parts (loops expanded) must equal the loop-expanded leg count
+  const parts = xml.match(/<workoutStruct>ratio;([\s\S]*?)<\/workoutStruct>/)[1].split(';').length;
+  const expanded = seqXml.reduce((a, s) => a + (s.match(/<leg>/g) || []).length * +s.match(/<loops>(\d+)<\/loops>/)[1], 0);
+  if (parts !== expanded) fails.push(`workoutStruct ${parts} parts != ${expanded} loop-expanded legs`);
+  // maxLevelRatioDisplay: 10-step ceiling over the max leg ratio (ramp peak)
+  const maxR = Math.max(0, ...[...xml.matchAll(/<levelRatio>(\d+)<\/levelRatio>/g)].map((m) => +m[1]), ...[...xml.matchAll(/<levelRatioEnd>(\d+)<\/levelRatioEnd>/g)].map((m) => +m[1]));
+  const maxD = +xml.match(/<maxLevelRatioDisplay>(\d+)<\/maxLevelRatioDisplay>/)[1];
+  if (maxD !== Math.max(100, Math.ceil(maxR / 10) * 10)) fails.push(`maxLevelRatioDisplay ${maxD} != ${Math.max(100, Math.ceil(maxR / 10) * 10)}`);
+  return fails.map((f) => `ictx ${file.name.split('/').pop()}: ${f}`);
+}
 
 let problems = 0;
 const warn = (msg) => { problems++; console.log('  ⚠ ' + msg); };
@@ -85,6 +131,14 @@ for (const sc of scenarios) {
   }
   // round trip + classifier agreement
   const files = planFiles(plan);
+  {
+    let order = 0;
+    for (const f of files.filter((x) => x.name.endsWith('.ictx'))) {
+      order++;
+      const w = plan.weeks.flatMap((x) => x.sessions).find((s) => !s.outdoor && f.name.endsWith(s.workout.file.replace(/\.zwo$/, '.ictx')));
+      for (const fail of checkIctx(f, w.workout.blocks, order)) warn(fail);
+    }
+  }
   for (const f of files.filter((x) => x.name.endsWith('.zwo'))) {
     const parsed = parseZwo(f.data);
     const m = computeMetrics(parsed);
@@ -98,7 +152,7 @@ for (const sc of scenarios) {
     if (!ok) mismatches.push(`${s.category} → classified ${c.primary}/${c.secondary}: ${s.workout.name}`);
   }
   const zip = makeZip(files);
-  console.log(`  files: ${files.length}, zip ${(zip.length / 1024).toFixed(0)} kB, names unique: ${new Set(files.map((f) => f.name)).size === files.length}`);
+  console.log(`  files: ${files.length} (${files.filter((f) => f.name.endsWith('.ictx')).length} ictx), zip ${(zip.length / 1024).toFixed(0)} kB, names unique: ${new Set(files.map((f) => f.name)).size === files.length}`);
 }
 
 console.log('\n### Single workouts');
