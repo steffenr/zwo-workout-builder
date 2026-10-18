@@ -12,6 +12,8 @@ export const intervals = (repeat, onDur, onP, offDur, offP, cad = null, cadRest 
   kind: 'intervals', repeat, onDur, offDur, onP: r3(onP), offP: r3(offP), cad, cadRest,
 });
 export const free = (dur) => ({ kind: 'free', dur, maxEffort: false });
+/** All-out effort: Zwift releases ERG and shows "MAX", so sprints are not capped by a target. */
+export const maxEffort = (dur) => ({ kind: 'free', dur, maxEffort: true });
 
 /** Total duration in seconds. */
 export function blocksDuration(blocks) {
@@ -19,7 +21,7 @@ export function blocksDuration(blocks) {
 }
 
 // Compact encoding for embedding the library in the app:
-// w/c/r: [code, dur, p0, p1, cad]   s: ['s', dur, p, cad]   i: ['i', rep, on, off, onP, offP, cad, cadRest]   f: ['f', dur]
+// w/c/r: [code, dur, p0, p1, cad]   s: ['s', dur, p, cad]   i: ['i', rep, on, off, onP, offP, cad, cadRest]   f: ['f', dur]   m: ['m', dur]
 export function encodeBlocks(blocks) {
   return blocks.map((b) => {
     switch (b.kind) {
@@ -28,7 +30,7 @@ export function encodeBlocks(blocks) {
       case 'ramp': return ['r', b.dur, b.p0, b.p1, b.cad];
       case 'steady': return ['s', b.dur, b.p, b.cad];
       case 'intervals': return ['i', b.repeat, b.onDur, b.offDur, b.onP, b.offP, b.cad, b.cadRest];
-      default: return ['f', b.dur];
+      default: return [b.maxEffort ? 'm' : 'f', b.dur];
     }
   }).map((a) => { while (a.length && a[a.length - 1] == null) a.pop(); return a; });
 }
@@ -41,6 +43,7 @@ export function decodeBlocks(arr) {
       case 'r': return ramp(a[1], a[2], a[3], a[4] ?? null);
       case 's': return steady(a[1], a[2], a[3] ?? null);
       case 'i': return intervals(a[1], a[2], a[4], a[3], a[5], a[6] ?? null, a[7] ?? null);
+      case 'm': return maxEffort(a[1]);
       default: return free(a[1]);
     }
   });

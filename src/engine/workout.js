@@ -19,7 +19,7 @@ export function summarize(blocks) {
     // Segments with full detail (cadence, free) for click-to-inspect, indexed to match profile
     segs: segs.map((s) => ({
       dur: s.dur, p0: s.free ? null : r2(s.p0), p1: s.free ? null : r2(s.p1),
-      cad: s.cad ?? null, free: !!s.free,
+      cad: s.cad ?? null, free: !!s.free, max: !!s.maxEffort,
     })),
   };
 }

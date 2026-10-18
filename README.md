@@ -169,6 +169,9 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
   efforts of ≥ 4 / 3 min, anaerobic efforts with recoveries ≥ 1.5× the effort, sprints at
   ≥ 170 % FTP with ≥ 2 min recovery. Hard sessions keep a library warm-up only if it lasts
   ≥ 8 min; otherwise a 10 min ramp is used.
+- **Sprints** are written as `<MaxEffort>` blocks (all-out, ERG released, shown as "MAX"),
+  both in sprint sessions and inside long rides; load and classification count them at an
+  assumed 200 % FTP (150 % for efforts over 30 s).
 
 ### Names
 

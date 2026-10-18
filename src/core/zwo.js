@@ -15,6 +15,9 @@ export const ZONES = [
 /** Power assumed for FreeRide blocks (no target given) when estimating load. */
 export const FREERIDE_ASSUMED_POWER = 0.6;
 
+/** Power assumed for MaxEffort blocks (all-out, no target) when estimating load. */
+export const MAX_EFFORT_ASSUMED_POWER = { sprint: 2.0, long: 1.5 };
+
 const num = (v, d = 0) => {
   const n = parseFloat(v);
   return Number.isFinite(n) ? n : d;
@@ -100,9 +103,13 @@ export function toSegments(blocks) {
       }
     } else if (b.kind === 'steady') {
       segs.push({ dur: b.dur, p0: b.p, p1: b.p, cad: b.cad, free: false });
+    } else if (b.kind === 'free' && b.maxEffort) {
+      // all-out effort without a target: counted as work at an assumed power (sprint-length
+      // efforts ~200 % FTP, longer ones ~150 %) so load and classification see it
+      const p = b.dur <= 30 ? MAX_EFFORT_ASSUMED_POWER.sprint : MAX_EFFORT_ASSUMED_POWER.long;
+      segs.push({ dur: b.dur, p0: p, p1: p, cad: null, free: false, maxEffort: true });
     } else if (b.kind === 'free') {
-      const p = b.maxEffort ? 1.5 : FREERIDE_ASSUMED_POWER;
-      segs.push({ dur: b.dur, p0: p, p1: p, cad: null, free: true });
+      segs.push({ dur: b.dur, p0: FREERIDE_ASSUMED_POWER, p1: FREERIDE_ASSUMED_POWER, cad: null, free: true });
     } else {
       segs.push({ dur: b.dur, p0: b.p0, p1: b.p1, cad: b.cad, free: false, wc: b.kind !== 'ramp' });
     }

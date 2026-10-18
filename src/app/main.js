@@ -375,10 +375,10 @@ function detailHTML(w, ftp, actions, workoutKey) {
     segDetail = `<div class="seg-detail" style="--c:var(--${zoneAvg})">
       <div class="seg-detail-head">
         <span class="chip" style="--c:var(--${zoneAvg})">${ZONE_TIP[zoneAvg]}</span>
-        <strong class="num">${watts} W</strong>
+        <strong class="num">${seg.max ? 'MAX' : `${watts} W`}</strong>
       </div>
       <div class="seg-detail-grid">
-        <div class="seg-dg"><b class="num">${seg.p0 == null || seg.p1 == null ? '--' : seg.p0 !== seg.p1 ? `${Math.round(seg.p0 * 100)}% → ${Math.round(seg.p1 * 100)}%` : `${Math.round(avg * 100)}%`}</b><span>Power</span></div>
+        <div class="seg-dg"><b class="num">${seg.max ? 'All-out (ERG off)' : seg.p0 == null || seg.p1 == null ? '--' : seg.p0 !== seg.p1 ? `${Math.round(seg.p0 * 100)}% → ${Math.round(seg.p1 * 100)}%` : `${Math.round(avg * 100)}%`}</b><span>Power</span></div>
         <div class="seg-dg"><b class="num">${fmtDur(seg.dur)}</b><span>Duration</span></div>
         <div class="seg-dg"><b class="num">${cadLabel}</b><span>Cadence</span></div>
       </div>

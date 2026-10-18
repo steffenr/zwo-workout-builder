@@ -1,6 +1,6 @@
 // compose.js — build new workouts from standard interval formats, sized to a work dose.
 import {
-  warmup, cooldown, steady, intervals, ramp, blocksDuration, roundTo,
+  warmup, cooldown, steady, intervals, ramp, blocksDuration, roundTo, maxEffort,
 } from './blocks.js';
 import { clamp, lerp } from './rng.js';
 
@@ -173,16 +173,27 @@ function anaerobicFormats(x) {
   return res;
 }
 
+// Sprints are all-out MaxEffort blocks: Zwift releases ERG for them, so the rider is not held
+// to a target far below real sprint power (a 160–200 % ERG target is a hard surge, not a sprint).
+function sprintSet(reps, s, rest, restCad = null) {
+  const out = [];
+  for (let r = 0; r < reps; r++) {
+    out.push(maxEffort(s));
+    if (r < reps - 1) out.push(steady(rest, 0.55, restCad));
+  }
+  return out;
+}
+
 function sprintFormats(x, f) {
   const res = [];
   for (const s of [10, 15, 20]) {
     for (let reps = 5; reps <= 12; reps++) {
-      res.push({ format: 'sprints', label: `Sprints ${reps}x${s}s`, blocks: [intervals(reps, s, lerp(1.6, 2.0, x), s >= 20 ? 270 : 180, 0.55)], workSec: reps * s });
+      res.push({ format: 'sprints', label: `Sprints ${reps}x${s}s`, blocks: sprintSet(reps, s, s >= 20 ? 270 : 180), workSec: reps * s });
     }
   }
   if (f.torque || f.race) {
     for (let reps = 5; reps <= 10; reps++) {
-      res.push({ format: 'standing-starts', label: `Standing starts ${reps}x15s`, blocks: [intervals(reps, 15, lerp(1.6, 1.9, x), 225, 0.55, 60, 90)], workSec: reps * 15 });
+      res.push({ format: 'standing-starts', label: `Standing starts ${reps}x15s`, blocks: sprintSet(reps, 15, 225, 90), workSec: reps * 15 });
     }
   }
   return res;
@@ -236,7 +247,7 @@ function enduranceMain(sec, x, f, rng) {
   if (f.sprintsInLong && sec >= m(40)) {
     const n = 6;
     const gap = Math.floor((sec - n * 10) / (n + 1));
-    for (let k = 0; k < n; k++) out.push(...aerobicFill(gap, x, f, rng), steady(10, 1.6));
+    for (let k = 0; k < n; k++) out.push(...aerobicFill(gap, x, f, rng), maxEffort(10));
     out.push(...aerobicFill(sec - n * 10 - n * gap, x, f, rng));
     return { blocks: out, label: 'Endurance with sprints', workSec: 60 };
   }

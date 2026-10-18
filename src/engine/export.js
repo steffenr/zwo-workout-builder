@@ -19,7 +19,7 @@ function blockXml(b) {
     case 'intervals':
       return `<IntervalsT Repeat="${b.repeat}" OnDuration="${Math.round(b.onDur)}" OffDuration="${Math.round(b.offDur)}" OnPower="${pw(b.onP)}" OffPower="${pw(b.offP)}" pace="0"${cadAttr(b.cad)}${cadAttr(b.cadRest, 'CadenceResting')}/>`;
     case 'free':
-      return `<FreeRide Duration="${Math.round(b.dur)}" FlatRoad="1"/>`;
+      return b.maxEffort ? `<MaxEffort Duration="${Math.round(b.dur)}"/>` : `<FreeRide Duration="${Math.round(b.dur)}" FlatRoad="1"/>`;
     default:
       return '';
   }
