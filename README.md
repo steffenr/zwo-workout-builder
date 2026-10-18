@@ -150,7 +150,11 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
   load target; available time caps the load ("time-limited").
 - **Key session types** rotate through a list per goal and phase, changed by style
   (polarized: threshold/VO2 instead of tempo/sweet spot; sweet spot: sub-threshold until the
-  peak) and weak spots (added in build and peak).
+  peak) and weak spots (added in build and peak). Climbing, racing and gravel keep VO2max
+  in the list from the build phase on, whatever the style. The first key slot of a week takes
+  the phase's main focus; further slots take the category used least so far in that phase,
+  so every category and weak spot comes round (with one key slot a week, the focus counts
+  double).
 - **Workouts**: either a library structure of the right type whose main set fits the slot
   (extra time becomes endurance riding), or a composed one: warm-up (+ openers before hard
   sessions), the interval format whose work time is closest to the target dose, aerobic

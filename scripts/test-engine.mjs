@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // test-engine.mjs — generate plans for sample athletes and check them.
 import fs from 'node:fs';
-import { buildPlan, buildSingle, planFiles, DAY_NAMES } from '../src/engine/plan.js';
+import { buildPlan, buildSingle, planFiles, keyList, DAY_NAMES } from '../src/engine/plan.js';
 import { parseZwo, computeMetrics } from '../src/core/zwo.js';
 import { classify } from '../src/core/classify.js';
 import { makeZip } from '../src/engine/export.js';
@@ -60,6 +60,19 @@ for (const sc of scenarios) {
       const w = s.workout;
       if (Math.abs(w.durMin - s.dur) > 2) warn(`W${wk.week} ${DAY_NAMES[s.day - 1]}: duration ${w.durMin} vs slot ${s.dur}`);
       if (verbose) console.log(`     ${w.file}  [${w.label}] TSS ${Math.round(w.metrics.tss)} IF ${w.metrics.IF.toFixed(2)}`);
+    }
+  }
+  // every key category of a phase appears in that phase (when it has enough key slots)
+  {
+    const byPhase = {};
+    for (const wk of plan.weeks.filter((w) => w.kind === 'load')) {
+      const e = (byPhase[wk.phase] ||= { slots: 0, cats: new Set() });
+      for (const s of wk.sessions) if (s.role === 'key') { e.slots++; e.cats.add(s.category); }
+    }
+    for (const [ph, e] of Object.entries(byPhase)) {
+      const L = keyList(sc, ph, plan.style);
+      const missing = L.filter((c) => !e.cats.has(c));
+      if (e.slots >= L.length + 1 && missing.length) warn(`${ph} phase never uses ${missing.join(', ')}`);
     }
   }
   // round trip + classifier agreement

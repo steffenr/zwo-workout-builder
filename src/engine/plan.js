@@ -121,6 +121,8 @@ export function keyList(input, phase, style) {
     if (phase !== 'peak') L = L.map((c) => (c === 'vo2max' || c === 'anaerobic' || c === 'sprint' ? 'threshold' : c === 'tempo' ? 'sweetspot' : c));
     if (!L.includes('sweetspot')) L.unshift('sweetspot');
   }
+  // goals decided on 3–8 min efforts keep VO2max work from the build phase on, whatever the style
+  if (phase !== 'base' && ['climbing', 'racing', 'gravel'].includes(input.goal) && !L.includes('vo2max')) L.push('vo2max');
   if (phase !== 'base') {
     for (const w of input.weaknesses || []) {
       const c = WEAKNESSES[w]?.category;
@@ -216,6 +218,7 @@ export function buildPlan(input, ctx) {
   const days = [...(input.days || [])].filter((d) => d.minutes > 0).sort((a, b) => a.day - b.day);
   const used = new Set();
   const lastFormat = {};
+  const catCount = {};
   const rider = RIDER_TYPES[input.riderType] || RIDER_TYPES.allrounder;
   const baseFlags = {
     ...rider.flags,
@@ -286,13 +289,27 @@ export function buildPlan(input, ctx) {
       return { day: d.day, minutes: d.minutes, role };
     });
 
-    // categories for key sessions
+    // categories for key sessions: the first slot keeps the phase's main focus (L[0]); further
+    // slots take the category of the list used least so far, so every category - including
+    // weak spots - comes round regularly. With one key slot a week, the focus counts double.
     let ki = 0;
+    const keySlots = sessions.filter((s) => !s.outdoor && s.role === 'key').length;
+    const thisWeek = new Set();
+    const phaseUse = (catCount[keyPhase] ||= {}); // usage is counted per phase
+    const pickLeastUsed = (list, weightFirst) => list
+      .filter((c) => !thisWeek.has(c) || list.every((x) => thisWeek.has(x)))
+      .map((c, i) => ({ c, i, n: (phaseUse[c] || 0) / (weightFirst && c === L[0] ? 2 : 1) }))
+      .sort((a, b) => a.n - b.n || a.i - b.i)[0].c;
     for (const s of sessions) {
       if (s.outdoor) continue;
       if (s.role === 'key') {
-        let cat = ki === 0 || L.length === 1 ? L[0] : L[1 + ((w + ki - 1) % (L.length - 1))];
+        let cat;
         if (kind === 'taper') cat = ki === 0 ? L[0] : 'vo2max';
+        else if (kind === 'recovery' || L.length === 1) cat = L[0];
+        else if (keySlots === 1) cat = pickLeastUsed(L, true);
+        else cat = ki === 0 ? L[0] : pickLeastUsed(L.slice(1), false);
+        if (kind === 'load') phaseUse[cat] = (phaseUse[cat] || 0) + 1;
+        thisWeek.add(cat);
         s.category = cat;
         ki++;
       } else if (s.role === 'recovery') s.category = 'recovery';
