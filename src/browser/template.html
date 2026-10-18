@@ -1,0 +1,357 @@
+<title>Zwo Library Index</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: bike-computer console — summary strip, filter rail, dense workout rows with power-profile strips */
+:root {
+  --bg: #f3f4f6;
+  --panel: #ffffff;
+  --ink: #16191f;
+  --muted: #5d6573;
+  --line: #dde0e6;
+  --accent: #e8590c;
+  --accent-ink: #ffffff;
+  /* Zwift-style zone colors (data, not accent) */
+  --z1: #8a929e; --z2: #2f7fd8; --z3: #2e9e5b; --z4: #e0b10f; --z5: #ea6a1f; --z6: #d6332d; --z7: #8f2fd1;
+  --free: #b8bdc6;
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1216; --panel: #171b21; --ink: #e8eaee; --muted: #98a0ad; --line: #2a3039;
+    --accent: #ff7a2e; --accent-ink: #111;
+    --z1: #8d96a3; --z2: #4d97ec; --z3: #3fbd72; --z4: #f0c62b; --z5: #ff8336; --z6: #ef4d45; --z7: #a95aea; --free: #4a515c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1216; --panel: #171b21; --ink: #e8eaee; --muted: #98a0ad; --line: #2a3039;
+  --accent: #ff7a2e; --accent-ink: #111;
+  --z1: #8d96a3; --z2: #4d97ec; --z3: #3fbd72; --z4: #f0c62b; --z5: #ff8336; --z6: #ef4d45; --z7: #a95aea; --free: #4a515c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; line-height: 1.05; }
+h2 { font-size: 1.35rem; }
+.eyebrow { font: 600 0.72rem/1 var(--f-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+header { display: grid; gap: 6px; }
+header p { margin: 0; color: var(--muted); max-width: 68ch; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stat { display: grid; gap: 2px; }
+.stat b { font: 600 1.7rem/1 var(--f-display); }
+.stat span { color: var(--muted); font-size: 0.85rem; }
+
+.typebar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; margin-top: 14px; }
+.typebar button { border: 0; padding: 0; cursor: pointer; color: #fff; font: 600 0.72rem var(--f-body); white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.typebar button:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 0.82rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px; font: 600 1.05rem var(--f-display); color: var(--muted); cursor: pointer; letter-spacing: 0.02em; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs button:focus-visible { outline: 2px solid var(--accent); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.filters label { display: grid; gap: 4px; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; }
+.filters input, .filters select {
+  font: 0.95rem var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 8px; min-width: 0;
+}
+.filters input[type="search"] { width: min(260px, 100%); }
+.filters input:focus-visible, .filters select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.count { margin-left: auto; color: var(--muted); font-size: 0.9rem; }
+
+.list { display: grid; gap: 0; }
+.row { display: grid; grid-template-columns: 220px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+.row:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.row .prof { width: 100%; height: 44px; display: block; }
+.row .t { min-width: 0; }
+.row .t strong { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.row .t small { color: var(--muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .m { display: flex; gap: 12px; align-items: center; font-size: 0.85rem; }
+.row .m .num { min-width: 3.4em; text-align: right; }
+.chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font: 600 0.72rem/1.5 var(--f-body); color: #fff; white-space: nowrap; }
+.chip.sec { background: transparent !important; border: 1px solid var(--line); color: var(--muted); }
+.flag { display: inline-block; font-size: 0.72rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 5px; margin: 2px 4px 0 0; }
+.lvl { display: inline-flex; gap: 2px; }
+.lvl i { width: 5px; height: 12px; border-radius: 1px; background: var(--line); }
+.lvl i.on { background: var(--accent); }
+
+.detail { grid-column: 1 / -1; display: grid; gap: 12px; padding: 4px 0 8px; cursor: default; }
+.detail .big { width: 100%; height: 150px; display: block; }
+.detail p { margin: 0; max-width: 75ch; color: var(--muted); }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px 16px; font-size: 0.88rem; }
+.kv div { display: grid; }
+.kv span { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.struct { font-family: var(--f-mono); font-size: 0.8rem; overflow-x: auto; white-space: pre-wrap; background: var(--bg); padding: 8px 10px; border-radius: 6px; }
+.zones { display: flex; height: 12px; border-radius: 3px; overflow: hidden; }
+.more { justify-self: center; margin-top: 12px; font: 600 0.95rem var(--f-body); background: var(--accent); color: var(--accent-ink); border: 0; padding: 8px 18px; border-radius: 6px; cursor: pointer; }
+.more:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 0.88rem; width: 100%; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+td.cell { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+.plans { display: grid; gap: 10px; }
+.plan { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); align-items: center; }
+.plan h3 { font-size: 1.1rem; overflow-wrap: anywhere; }
+.plan small { color: var(--muted); }
+.weeks { display: flex; align-items: flex-end; gap: 3px; height: 64px; }
+.weeks div { flex: 1; min-width: 6px; border-radius: 2px 2px 0 0; background: var(--z2); position: relative; }
+.weeks div.rec { background: var(--free); }
+.weeks div.test { background: var(--z1); }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.rule b { font: 600 1.4rem/1.1 var(--f-display); display: block; }
+.rule span { color: var(--muted); font-size: 0.85rem; }
+
+@media (max-width: 720px) {
+  .row { grid-template-columns: 1fr; gap: 6px; }
+  .row .m { flex-wrap: wrap; }
+  .plan { grid-template-columns: 1fr; }
+  .count { margin-left: 0; width: 100%; }
+  .typebar button { font-size: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Zwo Workout Builder · step 1</div>
+    <h1>Zwo Library Index</h1>
+    <p>Every workout in your library, parsed and classified by power profile. Use this to spot-check the labels before the builder relies on them. Power is shown as % of FTP in Zwift zone colours.</p>
+  </header>
+
+  <section class="panel" aria-label="Summary">
+    <div class="stats" id="stats"></div>
+    <div class="typebar" id="typebar" role="group" aria-label="Filter by type"></div>
+    <div class="legend" id="zlegend"></div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-workouts" aria-selected="true">Workouts</button>
+    <button role="tab" id="tab-coverage" aria-selected="false">Coverage</button>
+    <button role="tab" id="tab-plans" aria-selected="false">Plans &amp; rules</button>
+  </nav>
+
+  <section id="view-workouts" class="panel">
+    <div class="filters">
+      <label>Search<input type="search" id="q" placeholder="name, plan, structure…"></label>
+      <label>Type<select id="f-type"><option value="">All types</option></select></label>
+      <label>Duration<select id="f-dur">
+        <option value="">Any</option><option value="0-30">&lt; 30 min</option><option value="30-45">30–45</option>
+        <option value="45-60">45–60</option><option value="60-75">60–75</option><option value="75-90">75–90</option>
+        <option value="90-120">90–120</option><option value="120-999">120+</option>
+      </select></label>
+      <label>Level<select id="f-level"><option value="">Any</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+      <label>Tag<select id="f-flag"><option value="">Any</option></select></label>
+      <label>Source<select id="f-kind"><option value="">All</option><option value="plan">In a plan</option><option value="collection">Collection</option></select></label>
+      <label>Sort<select id="f-sort">
+        <option value="plan">Plan order</option><option value="tss">TSS ↓</option><option value="IF">IF ↓</option><option value="dur">Duration ↓</option>
+      </select></label>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="list" id="list"></div>
+    <button class="more" id="more" hidden>Show more</button>
+  </section>
+
+  <section id="view-coverage" class="panel" hidden>
+    <h2>Type × duration</h2>
+    <p style="color:var(--muted);margin:6px 0 12px;max-width:70ch">How many library workouts the builder can draw on for each combination. Thin cells are where it will have to compose new workouts from interval patterns instead of adapting existing ones.</p>
+    <div class="tablewrap"><table id="matrix"></table></div>
+    <h2 style="margin-top:22px">Most common interval patterns</h2>
+    <p style="color:var(--muted);margin:6px 0 12px;max-width:70ch">Repeated sets found across the library. These are the building blocks for composing new workouts.</p>
+    <div class="tablewrap"><table id="patterns"></table></div>
+  </section>
+
+  <section id="view-plans" class="panel" hidden>
+    <h2>Rules learned from your plans</h2>
+    <div class="rules" id="rules" style="margin:12px 0 22px"></div>
+    <h2>Multi-week plans</h2>
+    <p style="color:var(--muted);margin:6px 0 4px">Bars show weekly TSS. Grey bars are recovery weeks.</p>
+    <div class="plans" id="plans"></div>
+  </section>
+</div>
+
+<script>
+const DATA = __DATA__;
+const { catalog, plans, patterns, rules, summary } = DATA;
+const TYPES = ['recovery','endurance','tempo','sweetspot','threshold','vo2max','anaerobic','sprint','test'];
+const TYPE_LABEL = { recovery:'Recovery', endurance:'Endurance', tempo:'Tempo', sweetspot:'Sweet spot', threshold:'Threshold', vo2max:'VO2max', anaerobic:'Anaerobic', sprint:'Sprint', test:'Test' };
+const TYPE_ZONE = { recovery:'z1', endurance:'z2', tempo:'z3', sweetspot:'z4', threshold:'z4', vo2max:'z5', anaerobic:'z6', sprint:'z7', test:'free' };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue('--' + v).trim();
+const zoneVar = (p) => p == null ? 'free' : p < .56 ? 'z1' : p < .76 ? 'z2' : p < .91 ? 'z3' : p < 1.06 ? 'z4' : p < 1.21 ? 'z5' : p < 1.51 ? 'z6' : 'z7';
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const fmtMin = (m) => m >= 60 ? `${Math.floor(m/60)}h${String(Math.round(m%60)).padStart(2,'0')}` : `${Math.round(m)}m`;
+
+function profileSVG(profile, h, cls) {
+  const total = profile.reduce((a, s) => a + s[0], 0) || 1;
+  const top = 1.6;
+  let x = 0, shapes = '';
+  for (const [d, p0, p1] of profile) {
+    const w = d / total * 1000;
+    const a = p0 ?? 0.55, b = p1 ?? 0.55;
+    const y0 = h - Math.min(a, top) / top * h, y1 = h - Math.min(b, top) / top * h;
+    const z = p0 == null ? 'free' : zoneVar((a + b) / 2);
+    shapes += `<path d="M${x.toFixed(1)} ${h}L${x.toFixed(1)} ${y0.toFixed(1)}L${(x+w).toFixed(1)} ${y1.toFixed(1)}L${(x+w).toFixed(1)} ${h}Z" fill="var(--${z})"/>`;
+    x += w;
+  }
+  const ftp = h - 1 / top * h;
+  return `<svg class="${cls}" viewBox="0 0 1000 ${h}" preserveAspectRatio="none" aria-hidden="true">${shapes}<line x1="0" x2="1000" y1="${ftp}" y2="${ftp}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="6 6" vector-effect="non-scaling-stroke" opacity=".6"/></svg>`;
+}
+
+// ---------- summary
+document.getElementById('stats').innerHTML = [
+  [summary.workouts.toLocaleString(), 'workouts indexed'],
+  [summary.plans, 'multi-week plans'],
+  [summary.collections, 'themed collections'],
+  [summary.patterns.toLocaleString(), 'distinct interval patterns'],
+  [Math.round(catalog.reduce((a, w) => a + w.durMin, 0) / 60).toLocaleString() + ' h', 'of structured riding'],
+].map(([b, s]) => `<div class="stat"><b class="num">${b}</b><span>${s}</span></div>`).join('');
+
+const tb = document.getElementById('typebar');
+for (const t of TYPES) {
+  const n = summary.byPrimary[t] || 0;
+  const btn = document.createElement('button');
+  btn.style.flex = n; btn.style.background = `var(--${TYPE_ZONE[t]})`;
+  btn.title = `${TYPE_LABEL[t]}: ${n}`; btn.setAttribute('aria-label', `Show ${TYPE_LABEL[t]} (${n})`);
+  btn.textContent = n > 120 ? `${TYPE_LABEL[t]} ${n}` : '';
+  btn.onclick = () => { fType.value = t; showTab('workouts'); render(true); };
+  tb.appendChild(btn);
+}
+document.getElementById('zlegend').innerHTML = ['Z1 <56%','Z2 56–75%','Z3 76–90%','Z4 91–105%','Z5 106–120%','Z6 121–150%','Z7 >150%','Free ride']
+  .map((l, i) => `<span><i style="background:var(--${i < 7 ? 'z' + (i + 1) : 'free'})"></i>${l}</span>`).join('');
+
+// ---------- filters
+const $ = (id) => document.getElementById(id);
+const fType = $('f-type'), fDur = $('f-dur'), fLevel = $('f-level'), fFlag = $('f-flag'), fKind = $('f-kind'), fSort = $('f-sort'), q = $('q');
+TYPES.forEach((t) => fType.insertAdjacentHTML('beforeend', `<option value="${t}">${TYPE_LABEL[t]}</option>`));
+Object.keys(summary.flags).sort().forEach((f) => fFlag.insertAdjacentHTML('beforeend', `<option>${f}</option>`));
+
+let shown = 60, filtered = [], openId = null;
+function applyFilters() {
+  const s = q.value.trim().toLowerCase();
+  const [d0, d1] = fDur.value ? fDur.value.split('-').map(Number) : [0, 1e9];
+  filtered = catalog.filter((w) =>
+    (!fType.value || w.primary === fType.value) &&
+    (w.durMin >= d0 && w.durMin < d1) &&
+    (!fLevel.value || w.level === +fLevel.value) &&
+    (!fFlag.value || w.flags.includes(fFlag.value)) &&
+    (!fKind.value || w.planKind === fKind.value) &&
+    (!s || (w.name + ' ' + w.plan + ' ' + w.structure).toLowerCase().includes(s)));
+  const k = fSort.value;
+  if (k === 'tss') filtered.sort((a, b) => b.tss - a.tss);
+  else if (k === 'IF') filtered.sort((a, b) => b.IF - a.IF);
+  else if (k === 'dur') filtered.sort((a, b) => b.durMin - a.durMin);
+}
+function chip(t, sec) { return `<span class="chip${sec ? ' sec' : ''}" style="background:var(--${TYPE_ZONE[t]})">${TYPE_LABEL[t] || t}</span>`; }
+function lvl(n) { return `<span class="lvl" title="Intensity level ${n}/5" aria-label="Level ${n} of 5">${[1,2,3,4,5].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`; }
+
+function rowHTML(w) {
+  const where = w.week ? `${w.plan} · W${w.week} D${w.day}` : w.plan;
+  return `<div class="row" tabindex="0" data-id="${esc(w.id)}">
+    ${profileSVG(w.profile, 44, 'prof')}
+    <div class="t"><strong>${esc(w.title)}</strong><small>${esc(where)}</small>
+      <div>${chip(w.primary)} ${w.secondary ? chip(w.secondary, true) : ''} ${w.flags.map((f) => `<span class="flag">${esc(f)}</span>`).join('')}</div></div>
+    <div class="m"><span class="num" title="Duration">${fmtMin(w.durMin)}</span><span class="num" title="TSS">${w.tss} TSS</span><span class="num" title="Intensity Factor">IF ${w.IF.toFixed(2)}</span>${lvl(w.level)}</div>
+    ${openId === w.id ? detailHTML(w) : ''}
+  </div>`;
+}
+function detailHTML(w) {
+  const zs = ['Z1','Z2','Z3','Z4','Z5','Z6','Z7','free'];
+  const tot = zs.reduce((a, z) => a + (w.zonesMin[z] || 0), 0) || 1;
+  const zoneBar = zs.map((z, i) => `<div style="flex:${w.zonesMin[z] || 0};background:var(--${i < 7 ? 'z' + (i + 1) : 'free'})" title="${z}: ${w.zonesMin[z]} min"></div>`).join('');
+  const work = Object.entries(w.workMin).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${TYPE_LABEL[k]} ${v}m`).join(' · ') || 'none above tempo';
+  return `<div class="detail">
+    ${profileSVG(w.profile, 150, 'big')}
+    <div class="zones" aria-label="Time in zone">${zoneBar}</div>
+    <div class="kv">
+      <div><span>File</span><span class="num" style="text-transform:none;letter-spacing:0;color:var(--ink);overflow-wrap:anywhere">${esc(w.file)}</span></div>
+      <div><span>NP / Avg</span><b class="num">${Math.round(w.np*100)}% / ${Math.round(w.avg*100)}%</b></div>
+      <div><span>Max target</span><b class="num">${Math.round(w.maxPower*100)}%</b></div>
+      <div><span>Longest effort</span><b class="num">${w.longestEffortMin} min</b></div>
+      <div><span>Work share</span><b class="num">${Math.round(w.workShare*100)}%</b></div>
+      <div><span>Label from</span><b>${w.labelSource === 'title' ? 'title + metrics' : 'metrics'}</b></div>
+    </div>
+    <div><div class="eyebrow" style="margin-bottom:4px">Work by type</div>${esc(work)}</div>
+    ${w.structure ? `<div class="struct">${esc(w.structure)}</div>` : ''}
+    ${w.description ? `<p>${esc(w.description)}</p>` : ''}
+  </div>`;
+}
+function render(reset) {
+  if (reset) { shown = 60; applyFilters(); }
+  $('count').textContent = `${filtered.length.toLocaleString()} workouts`;
+  $('list').innerHTML = filtered.slice(0, shown).map(rowHTML).join('') || '<p style="color:var(--muted);padding:12px 4px">No workouts match these filters.</p>';
+  $('more').hidden = shown >= filtered.length;
+}
+$('list').addEventListener('click', (e) => {
+  if (e.target.closest('.detail')) return;
+  const r = e.target.closest('.row'); if (!r) return;
+  openId = openId === r.dataset.id ? null : r.dataset.id; render(false);
+});
+$('list').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('row')) { e.preventDefault(); e.target.click(); } });
+$('more').onclick = () => { shown += 60; render(false); };
+[fType, fDur, fLevel, fFlag, fKind, fSort].forEach((el) => el.addEventListener('change', () => render(true)));
+q.addEventListener('input', () => render(true));
+
+// ---------- tabs
+function showTab(name) {
+  for (const t of ['workouts', 'coverage', 'plans']) {
+    $('tab-' + t).setAttribute('aria-selected', t === name);
+    $('view-' + t).hidden = t !== name;
+  }
+}
+['workouts', 'coverage', 'plans'].forEach((t) => $('tab-' + t).onclick = () => showTab(t));
+
+// ---------- coverage
+const buckets = ['<30','30-44','45-59','60-74','75-89','90-119','120-179','180+'];
+const maxCell = Math.max(...TYPES.flatMap((t) => buckets.map((b) => summary.primaryByDuration[t]?.[b] || 0)));
+$('matrix').innerHTML = `<thead><tr><th>Type</th>${buckets.map((b) => `<th>${b} min</th>`).join('')}<th>Total</th></tr></thead><tbody>` +
+  TYPES.map((t) => `<tr><td>${chip(t)}</td>${buckets.map((b) => {
+    const n = summary.primaryByDuration[t]?.[b] || 0;
+    const a = n ? 8 + Math.round(n / maxCell * 50) : 0;
+    return `<td class="cell" style="background:color-mix(in srgb, var(--${TYPE_ZONE[t]}) ${a}%, transparent)">${n || '·'}</td>`;
+  }).join('')}<td class="cell"><b>${summary.byPrimary[t] || 0}</b></td></tr>`).join('') + '</tbody>';
+$('patterns').innerHTML = `<thead><tr><th>Pattern (one repeat)</th><th>Type</th><th>Seen</th><th>Repeats</th></tr></thead><tbody>` +
+  patterns.slice(0, 40).map((p) => `<tr><td class="cell" style="text-align:left">${esc(p.signature)}</td><td>${chip(p.category)}</td><td class="cell">${p.count}</td><td class="cell">${p.repeatMin === p.repeatMax ? p.repeatMin : `${p.repeatMin}–${p.repeatMax}`}</td></tr>`).join('') + '</tbody>';
+
+// ---------- plans
+const R = rules;
+const pct = (x) => `${x > 1 ? '+' : ''}${Math.round((x - 1) * 100)}%`;
+$('rules').innerHTML = [
+  [pct(R.weeklyLoadIncrease.median), `median week-to-week load increase in build weeks (middle half: ${pct(R.weeklyLoadIncrease.p25)} to ${pct(R.weeklyLoadIncrease.p75)})`],
+  [`${Math.round(R.recoveryWeekLoad.median * 100)}%`, 'of the previous weeks’ load in a recovery week'],
+  [`${R.weeksBetweenRecovery.median} weeks`, 'of building between recovery weeks (typical)'],
+  [`${Math.round(R.tssPerHour.median)} TSS/h`, `typical weekly load density (${Math.round(R.tssPerHour.p25)}–${Math.round(R.tssPerHour.p75)})`],
+  [`${Math.round(R.longestRideShareOfWeek.median * 100)}%`, 'of weekly hours sits in the longest ride'],
+  [`${Math.round(R.hardSessionFollowedBy.easyOrModerate / (R.hardSessionFollowedBy.easyOrModerate + R.hardSessionFollowedBy.anotherHard) * 100)}%`, 'of hard sessions (threshold and above) are followed by an easier one'],
+].map(([b, s]) => `<div class="rule"><b class="num">${b}</b><span>${s}</span></div>`).join('');
+
+const realPlans = plans.filter((p) => p.kind === 'plan').sort((a, b) => b.weeks - a.weeks);
+$('plans').innerHTML = realPlans.map((p) => {
+  const mx = Math.max(...p.weeksDetail.map((w) => w.tss));
+  const bars = p.weeksDetail.map((w) => `<div class="${w.recoveryWeek ? 'rec' : w.week === 0 ? 'test' : ''}" style="height:${Math.max(4, w.tss / mx * 100)}%" title="Week ${w.week}: ${w.workouts} rides, ${w.hours} h, ${w.tss} TSS${w.recoveryWeek ? ' (recovery)' : ''}"></div>`).join('');
+  return `<div class="plan"><div><h3>${esc(p.tag)}</h3><small>${p.weeks} weeks · ${p.workouts} workouts · avg ${p.avgDurMin} min · ${p.style.label} (${Math.round(p.style.low*100)}/${Math.round(p.style.mid*100)}/${Math.round(p.style.high*100)} low/mid/high)</small></div><div class="weeks" aria-label="Weekly TSS">${bars}</div></div>`;
+}).join('');
+
+render(true);
+</script>
