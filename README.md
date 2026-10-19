@@ -55,7 +55,8 @@ Copy the `.zwo` files into Zwift's `Documents/Zwift/Workouts/<user id>/`, or imp
 `.ictx` files into icTrainer. Power targets are % of FTP, so the files work for any FTP.
 
 Clicking the logo returns to the mode selection; answers and the last result are kept.
-The colour theme (Match system / Light / Dark) is in Settings (gear icon, top right).
+The colour theme (Match system / Light / Dark) is in Settings (gear icon, top right); the
+icon next to it opens this repository on GitHub.
 Answers and the theme are stored in the browser's local storage only.
 
 The design follows zwoTrainer's design system, see `DESIGN.md`.
