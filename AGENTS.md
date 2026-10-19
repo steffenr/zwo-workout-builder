@@ -103,8 +103,9 @@ and as the favicon.
   zwoTrainer changes a token or a shared component, mirror it here.
 - Tokens only (no literal colours in components), both themes, zone colours only for
   training intensity, the accent only for actions, selection and progress.
-- Don't add controls to the top bar (app icon + brand left; Settings and the GitHub link
-  right, GitHub last). New options go into the Settings popover. The app icon is `src/app/icon.svg`; change it there only.
+- Don't add controls to the top bar (app icon + brand left; Settings, Buy Me a Coffee and
+  GitHub right, GitHub last). New options go into the Settings popover. The app icon is
+  `src/app/icon.svg`; change it there only.
 - Rebuild with `npm run build` and open the file at 1280 px and 390 px in light and dark
   mode. The page body must never scroll horizontally; controls must stay inside their
   tiles and cards at 390 px.

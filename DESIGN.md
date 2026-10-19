@@ -114,7 +114,7 @@ Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's to
 
 ```
 ┌ top bar (sticky, 56 px, blurred bg, bottom border) ────────────────────────┐
-│ [icon] zwoWorkoutBuilder                                        [⚙] [GH] │
+│ [icon] zwoWorkoutBuilder                                    [⚙] [☕] [GH] │
 └────────────────────────────────────────────────────────────────────────────┘
 #view (max 1120 px)
   step tabs:  (✓) Mode  (✓) Rider  (3) Goal  (4) Week  (5) Style  (6) Result
@@ -124,9 +124,10 @@ Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's to
 ```
 
 - **Top bar:** brand left (26 px app icon + `zwo<b>WorkoutBuilder</b>`, links back to the
-  mode selection); right: Settings (gear), then the GitHub link as the last item (`a.icon-btn`
-  `#link-github`, GitHub mark in `currentColor`, opens the repository in a new tab). Nothing else; new options
-  go in Settings.
+  mode selection); right: Settings (gear), Buy Me a Coffee (`#link-coffee`, cup icon), then
+  the GitHub link as the last item (`#link-github`, GitHub mark). Both links are
+  `a.icon-btn` with the icon in `currentColor` and open in a new tab. Nothing else; new
+  options go in Settings.
 - **Step tabs** (`.tabs`): numbered steps; current = accent underline and filled number,
   done = check in soft accent, future = disabled until a result exists. On phones only the
   current step shows its label.
@@ -168,6 +169,7 @@ The body never scrolls horizontally (checked at 390 px).
 | **Zones bar / legend** | 10 px bar with 2 px gaps; legend with 9 px squares, zone name and minutes. |
 | **Popover** `.popover` | radius 12, `--shadow-lg`, 6 px padding, 260 px minimum; `.pop-title` uppercase 11 px. Settings: Appearance (Match system / Light / Dark). Closes on outside click and Esc. |
 | **Inputs** | `--surface`, 1 px `--line-strong`, radius 10, padding 8 × 12, 14 px; focus = accent border + 3 px `--accent-soft` ring. Number inputs right-aligned in `--num`. Checkboxes and ranges use `accent-color`. |
+| **Footer** `.foot` | 12.5 px muted note under the page; links in `--text-2`, underlined, `--text` on hover ("Buy me a coffee"). |
 | **Toast** `.toast` | inverted, radius 12, bottom centre, 3.5 s, short plain English. |
 
 ### Builder-specific
@@ -223,7 +225,7 @@ icon's colours are the one place where literal hex values are allowed.
 - [ ] Only tokens and zone colours; no new raw colours.
 - [ ] Same as zwoTrainer where a shared component exists; new patterns documented here.
 - [ ] Checked in light **and** dark, at 1280 px and 390 px.
-- [ ] Top bar unchanged (brand · Settings · GitHub); new options in the Settings popover.
+- [ ] Top bar unchanged (brand · Settings · coffee · GitHub); new options in the Settings popover.
 - [ ] Profile text is HTML, never stretched SVG text.
 - [ ] Interpolated text is escaped with `esc()`.
 - [ ] README / DESIGN.md updated if the change is user-visible or adds a pattern.
