@@ -113,8 +113,8 @@ Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's to
 ### App shell
 
 ```
-┌ top bar (sticky, 56 px, blurred bg, bottom border) ────────────────────────┐
-│ [icon] zwoWorkoutBuilder                                    [⚙] [☕] [GH] │
+┌ top bar (sticky, 64 px, blurred bg, bottom border; content max 1120 px) ───┐
+│ [icon] zwoWorkoutBuilder                         zwoTrainer  [GH] [☕] [⚙] │
 └────────────────────────────────────────────────────────────────────────────┘
 #view (max 1120 px)
   step tabs:  (✓) Mode  (✓) Rider  (3) Goal  (4) Week  (5) Style  (6) Result
@@ -123,11 +123,16 @@ Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's to
 <dialog id="modal"> workout details · #popover settings · #toast
 ```
 
-- **Top bar:** brand left (26 px app icon + `zwo<b>WorkoutBuilder</b>`, links back to the
-  mode selection); right: Settings (gear), Buy Me a Coffee (`#link-coffee`, cup icon), then
-  the GitHub link as the last item (`#link-github`, GitHub mark). Both links are
-  `a.icon-btn` with the icon in `currentColor` and open in a new tab. Nothing else; new
-  options go in Settings.
+- **Top bar:** mirrors the header of the zwoTrainer website (`../zwoTrainer/site/site.css`,
+  `.nav`): 64 px, `--bg` at 82 % with `saturate(1.6) blur(14px)`, bottom border, content in
+  `.topbar-inner` aligned with `#view` (max 1120 px). Brand left (30 px app icon with radius 7,
+  21 px `zwo<b>WorkoutBuilder</b>`, `b` accent 600; links back to the mode selection). Right
+  (`.nav-links`): text link zwoTrainer (website; 15 px / 500, `--text-2`, `--surface-2` on
+  hover, radius 10), then GitHub (`#link-github`, GitHub mark) and Buy me a coffee
+  (`#link-coffee`, cup) as icon-only links (`a.ico`, 38 × 38, 18 px icon, label in
+  `title` + `aria-label`), then Settings (`.nav-btn`, gear) as the last item. External links
+  open in a new tab. Below 720 px the brand drops to 18 px / 26 px icon and the zwoTrainer
+  link is hidden. Nothing else; new options go in Settings.
 - **Step tabs** (`.tabs`): numbered steps; current = accent underline and filled number,
   done = check in soft accent, future = disabled until a result exists. On phones only the
   current step shows its label.
@@ -154,7 +159,8 @@ The body never scrolls horizontally (checked at 390 px).
 | Component | Spec |
 |---|---|
 | **Button** `.btn` | 1 px `--line-strong` border, `--surface`, 600 14 px, radius 10, padding 9 × 16. `.primary` (accent fill), `.ghost` (transparent), `.sm` (13 px, radius 8), `.round` (circle). One primary per view or dialog, placed last. Download buttons carry the download icon. |
-| **Icon button** `.icon-btn` | 36 × 36, transparent, muted icon, `--surface-2` on hover; `title` + `aria-label`. Also used on links (GitHub); external links get `target="_blank" rel="noopener noreferrer"` and say "(opens in a new tab)" in the label. |
+| **Icon button** `.icon-btn` | 36 × 36, transparent, muted icon, `--surface-2` on hover; `title` + `aria-label`. External links get `target="_blank" rel="noopener noreferrer"` and say "(opens in a new tab)" in the label. |
+| **Top-bar button** `.nav-btn` | 38 × 38, 1 px `--line-strong` border, radius 10, 18 px icon in `--text-2`; `--surface-2` on hover or while open. Same as the website's theme button. Only used for Settings. |
 | **Segmented control** `.seg-ctl` | `--surface-2` track, radius 10, 3 px padding; selected item is a raised `--surface` pill. Used for experience, plan length and the theme. |
 | **Card** `.card` | `--surface`, 1 px `--line`, radius 14, padding 20, `--shadow`. |
 | **Tabs** `.tabs` | 14 px 600 muted, accent 2 px underline on the current item. Used for the wizard steps. |
@@ -225,7 +231,7 @@ icon's colours are the one place where literal hex values are allowed.
 - [ ] Only tokens and zone colours; no new raw colours.
 - [ ] Same as zwoTrainer where a shared component exists; new patterns documented here.
 - [ ] Checked in light **and** dark, at 1280 px and 390 px.
-- [ ] Top bar unchanged (brand · Settings · coffee · GitHub); new options in the Settings popover.
+- [ ] Top bar unchanged (brand · zwoTrainer · GitHub · coffee · Settings); new options in the Settings popover.
 - [ ] Profile text is HTML, never stretched SVG text.
 - [ ] Interpolated text is escaped with `esc()`.
 - [ ] README / DESIGN.md updated if the change is user-visible or adds a pattern.
