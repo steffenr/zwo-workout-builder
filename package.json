@@ -12,6 +12,6 @@
     "all": "npm run index && npm test && npm run review && npm run build"
   },
   "devDependencies": {
-    "esbuild": "^0.23.1"
+    "esbuild": "^0.28.2"
   }
 }
