@@ -15,13 +15,17 @@ No AI service, no server, no account: the app is one HTML file.
 
 ## Using the app
 
-Open **`dist/zwo-workout-builder.html`** in a browser.
+Use the hosted copy on GitHub Pages (<https://steffenr.github.io/zwo-workout-builder/>, always
+the latest release), download `zwo-workout-builder.html` from a GitHub Release, or build it
+yourself and open **`dist/zwo-workout-builder.html`** in a browser.
 
 1. **Mode** — training plan or single workout
 2. **Rider** — FTP, weight, hours per week over the last 4–6 weeks, structured-training experience
-3. **Goal** (plan) — goal, plan length in weeks or until an event date, optional FTP ramp test
-   **Workout** (single) — training type or "Pick for me", length
-4. **Week** (plan) — riding days, minutes per day, outdoor rides (counted for load, no file)
+3. **Goal** (plan) — goal, plan length (4–16 weeks, or until an event date: 4–24 weeks
+   ending with a taper week), optional FTP ramp test
+   **Workout** (single) — training type or "Pick for me", length (30 min – 3 h)
+4. **Week** (plan) — riding days, time per day (30 min – 5 h in 15-minute steps), outdoor
+   rides (counted for load, no file)
 5. **Style** — training style (pyramidal / polarized / sweet spot / auto), intensity,
    rider type, weak spots, cadence drills
 6. **Result**
@@ -62,7 +66,8 @@ The design follows zwoTrainer's design system, see `DESIGN.md`.
 ## Project layout
 
 ```
-_workout-builder/            lives inside the workout library folder (folders starting with _ are skipped)
+zwoWorkoutBuilder/
+├── .github/                 CI, release and Pages workflows, Dependabot
 ├── src/
 │   ├── core/                parsing, metrics, classification (shared by scripts and app)
 │   │   ├── zwo.js           .zwo parser, 1-s power timeline, NP / IF / TSS, zones, efforts
@@ -77,7 +82,7 @@ _workout-builder/            lives inside the workout library folder (folders st
 │   │   ├── ictx.js          .ictx (icTrainer) XML writer, port of the WoZ converter
 │   │   ├── blocks.js        block constructors, compact encoding
 │   │   └── rng.js           seeded PRNG + hash (same answers → same plan)
-│   ├── app/                 wizard UI: main.js + template.html
+│   ├── app/                 wizard UI: main.js, template.html (tokens + CSS), icon.svg (app icon / favicon)
 │   └── browser/             template of the library review page
 ├── scripts/
 │   ├── build-index.mjs      library → data/*.json
@@ -86,15 +91,17 @@ _workout-builder/            lives inside the workout library folder (folders st
 │   ├── test-engine.mjs      sample athletes → plans, checks
 │   ├── build-browser.mjs    dist/library-index.html
 │   └── build-app.mjs        dist/zwo-workout-builder.html (esbuild bundle + data)
-├── data/                    generated knowledge base (see below)
-├── dist/                    generated pages
+├── data/                    generated knowledge base (see below), committed
+├── dist/                    generated pages (not committed)
+├── library-snapshot.tar.gz  the source .zwo library, to regenerate data/
 ├── README.md  AGENTS.md  DESIGN.md
 └── package.json
 ```
 
 ## Building
 
-Node 18+. The engine has no runtime dependencies; esbuild is only used to bundle the app.
+Node 18+ (CI uses Node 24). The engine has no runtime dependencies; esbuild is only used to
+bundle the app.
 
 ```sh
 npm install          # once
@@ -105,7 +112,20 @@ npm run build        # dist/zwo-workout-builder.html
 npm run all          # all of the above
 ```
 
-After adding or removing workouts in the library, run `npm run all`.
+`npm test` and `npm run build` work from the committed `data/`; `npm run index` is only
+needed when the library or the classification in `src/core` changes.
+
+`npm run index` reads the parent folder, so it only works when the repo sits inside the
+workout library (one sub-folder per plan or collection, files `WeekNN_DayNN_<Name>.zwo`;
+folders starting with `_` or `.` are skipped). Otherwise index the committed snapshot:
+
+```sh
+mkdir -p /tmp/zwo-library && tar xzf library-snapshot.tar.gz -C /tmp/zwo-library
+node scripts/build-index.mjs /tmp/zwo-library data && node scripts/derive-rules.mjs data
+```
+
+The app embeds the engine data gzip-compressed and base64-encoded (about 0.24 MB instead of
+1.15 MB); the browser unpacks it with `DecompressionStream`.
 
 ## Data (`data/`)
 
@@ -119,7 +139,8 @@ After adding or removing workouts in the library, run `npm run all`.
 | `summary.json` | counts by type, level, duration, type × duration |
 
 The library's titles, descriptions and plan names stay in `data/` and the review page.
-The app bundle contains only power structures and metrics, and no generated name or
+The app bundle contains only power structures and metrics (`build-app.mjs` keeps `primary,
+secondary, level, flags, workMin, durMin, blocks` per workout), and no generated name or
 description refers to the library.
 
 ## How it works
@@ -211,13 +232,23 @@ between types the metrics found. FreeRide counts as 60 % FTP for load.
 ## Checks
 
 `npm test` builds six sample plans (beginner, FTP, polarized racer, gran fondo with an
-outdoor day, comeback with far more time than current fitness, two days a week) and reports:
+outdoor day, comeback with far more time than current fitness, time-crunched sweet spot on
+two days a week) plus single workouts, and reports:
 
-- weeks over their load target, week 1 above 1.3 × the current load, slot durations not met
-- back-to-back hard days, key sessions after a ≥ 150 min ride (levels 1–3)
+- weeks more than 15 % over their load target, week 1 above 1.3 × the current load, slot
+  durations not met (±2 min)
+- key sessions after a ≥ 150 min ride (levels 1–3); back-to-back hard days are listed
+- a hard session the day before or after the FTP test, or the test right after the long ride
+- a key category of a phase that never comes round in that phase
 - TSS changes after writing and re-parsing the `.zwo` files
+- `.ictx` files: well-formed envelope and balanced tags, `displayOrder`, leg durations equal
+  to the block durations, level badges, `exerciseType`, `workoutStruct` parts and
+  `maxLevelRatioDisplay`
 - whether the classifier recognises each generated workout as its intended type
+  (currently 205/207)
 - duplicate file names
+
+It ends with `problems: N` and exits non-zero when N > 0, which fails CI and releases.
 
 `npm run check-labels` compares library labels with the coach-given titles.
 
@@ -250,4 +281,6 @@ One-time setup:
   pushable by GitHub Actions, i.e. no branch protection that blocks it).
 
 `npm test` exits non-zero when a check reports a problem, so a broken engine stops both
-the release and the deployment.
+the release and the deployment. Pushes to `develop` don't change the live site. Running
+"Deploy app to GitHub Pages" manually publishes the chosen branch instead, until the next
+release (or a manual "Release" run) puts a tagged build back.

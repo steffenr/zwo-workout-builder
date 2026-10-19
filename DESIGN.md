@@ -4,8 +4,9 @@ zwoWorkoutBuilder uses the design system of **zwoTrainer** (`../zwoTrainer/DESIG
 `ui/css/styles.css`), so both apps look and behave like one product. This file lists what
 the builder uses from it, the few builder-specific components, and the rules for changes.
 
-Everything lives in `src/app/template.html` (tokens on `:root`, component CSS) and a few
-constants in `src/app/main.js` (`ZONE_BOUNDS`, `ZONES`, `ZONE_OF`). If zwoTrainer changes a
+Everything lives in `src/app/template.html` (tokens on `:root`, component CSS), the app
+icon `src/app/icon.svg` and a few constants in `src/app/main.js` (`ZONE_BOUNDS`, `ZONES`,
+`ZONE_OF`). If zwoTrainer changes a
 token or a shared component, mirror the change here. A new pattern is documented here.
 
 ## Principles
@@ -122,7 +123,7 @@ Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's to
 <dialog id="modal"> workout details · #popover settings · #toast
 ```
 
-- **Top bar:** brand left (zwoTrainer icon + `zwo<b>WorkoutBuilder</b>`, links back to the
+- **Top bar:** brand left (26 px app icon + `zwo<b>WorkoutBuilder</b>`, links back to the
   mode selection), Settings (gear) right. Nothing else; new options go in Settings.
 - **Step tabs** (`.tabs`): numbered steps; current = accent underline and filled number,
   done = check in soft accent, future = disabled until a result exists. On phones only the
@@ -175,7 +176,8 @@ The body never scrolls horizontally (checked at 390 px).
 | **Mix bar** `.zmix` | 6 px rounded bar in zone fills: which intensities a goal's key sessions use (Z3/Z4/Z5), or a style's easy/moderate/hard split (Z2/Z4/Z5). |
 | **Form rows** `.frow` | label (+ muted hint) left, control right, 1 px divider between rows. |
 | **Summary card** `.side` | "Your answers": `.stats` grid of `.k` label + 22 px value, a seven-day strip (`--accent-soft` = indoor, `--surface-3` = outdoor) and a meta line. Sticky at 76 px. |
-| **Day tile** `.day` | resting: `--surface-2`, muted day name; riding: `--surface` with accent border and ring, time stepper (− / + round buttons, 15-minute steps) and an "Outdoor" toggle badge. |
+| **Day tile** `.day` | resting: `--surface-2`, muted day name; riding: `--surface` with accent border and ring, a time stepper and an "Outdoor" toggle badge. The tile itself toggles rest / ride. |
+| **Day stepper** `.stepper` | duration on its own line (19 px `--num`, 650, "1h30"; full duration as `title`), below it a compact pill `.steps` (`--surface-2`, 1 px `--line-strong`, radius 99) with − / + halves (30 × 24, divider `--line`, `--surface-3` on hover). 15-minute steps; − is disabled at 30 min, + at 5 h. Stays inside the tile down to 390 px. |
 | **Volume bar** `.pbar` | 6 px track, accent fill for available time, a 2 px `--text` marker for current hours. |
 | **Weekly load chart** `.lbars` | one bar per week: accent = build, 35 % accent = recovery, `--line-strong` = taper; target as a thin `--text` line at 50 % opacity; value above; week number and phase as text below. |
 | **Option card** `.opt` | single-workout option: eyebrow "Option n" + zone tag, title, 64 px profile on `--surface-2`, meta, small download buttons. The card opens the dialog. |
@@ -184,7 +186,12 @@ The body never scrolls horizontally (checked at 390 px).
 
 Inline SVG, 24 × 24 viewBox, `stroke="currentColor"`, `stroke-width="2"`, round caps and
 joins (Lucide-like); the gear is zwoTrainer's filled glyph. 20 px in the top bar, 16 px in
-buttons. The app icon is zwoTrainer's (black tile, five zone bars).
+buttons.
+
+The app icon is `src/app/icon.svg` (black rounded tile with rising bars in the zone fills).
+`build-app.mjs` strips its XML prolog and metadata, inlines it in the top bar
+(`aria-hidden`, 26 px) and embeds it as an SVG data-URI favicon. Edit only that file; the
+icon's colours are the one place where literal hex values are allowed.
 
 ## Interaction rules
 
