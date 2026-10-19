@@ -1,4 +1,8 @@
-# Zwo Workout Builder
+<h1 align="center">
+<img width="350" alt="zwo-workout-builder-logo-with-text" src="https://github.com/user-attachments/assets/64a7a2cd-90ab-48cb-9648-31d395704427" />  
+</h1>
+
+# zwoWorkoutBuilder
 
 A guided wizard that builds Zwift training plans and single workouts (`.zwo`), fully offline.
 
