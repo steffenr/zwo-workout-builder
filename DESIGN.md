@@ -114,7 +114,7 @@ Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's to
 
 ```
 ┌ top bar (sticky, 56 px, blurred bg, bottom border) ────────────────────────┐
-│ [icon] zwoWorkoutBuilder                                         [⚙] [⑂] │
+│ [icon] zwoWorkoutBuilder                                        [⚙] [GH] │
 └────────────────────────────────────────────────────────────────────────────┘
 #view (max 1120 px)
   step tabs:  (✓) Mode  (✓) Rider  (3) Goal  (4) Week  (5) Style  (6) Result
@@ -125,7 +125,7 @@ Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's to
 
 - **Top bar:** brand left (26 px app icon + `zwo<b>WorkoutBuilder</b>`, links back to the
   mode selection); right: Settings (gear), then the GitHub link as the last item (`a.icon-btn`
-  `#link-github`, branch icon, opens the repository in a new tab). Nothing else; new options
+  `#link-github`, GitHub mark in `currentColor`, opens the repository in a new tab). Nothing else; new options
   go in Settings.
 - **Step tabs** (`.tabs`): numbered steps; current = accent underline and filled number,
   done = check in soft accent, future = disabled until a result exists. On phones only the
