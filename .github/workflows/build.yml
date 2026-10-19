@@ -1,0 +1,57 @@
+name: Build
+
+# Reusable stage: engine tests + app build. Called by ci.yml and release.yml.
+# With `artifact` set, it uploads dist/zwo-workout-builder.html so the later
+# stages of the same run (GitHub Release, Pages) ship exactly the tested file.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to build (branch, tag or SHA). Empty = the triggering ref.
+        type: string
+        default: ''
+      artifact:
+        description: Name for the uploaded app artifact. Empty = no upload.
+        type: string
+        default: ''
+    outputs:
+      version:
+        description: Version from package.json of the built source
+        value: ${{ jobs.build.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: test + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+
+      - id: meta
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - if: inputs.artifact != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact }}
+          path: dist/zwo-workout-builder.html
+          if-no-files-found: error
+          retention-days: 7

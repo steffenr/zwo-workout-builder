@@ -1,55 +1,64 @@
 name: Deploy app to GitHub Pages
 
-# Publishes the built app (dist/zwo-workout-builder.html) as the site's index.html
-# on every push to develop, or manually from Actions -> "Deploy app to GitHub Pages".
+# Publishes the built app (dist/zwo-workout-builder.html) as the site's index.html.
+#   - called by release.yml as the last stage of every release (reuses the release's
+#     tested artifact, so the site always matches the latest release)
+#   - manually: Actions → "Deploy app to GitHub Pages" → Run workflow (builds and
+#     deploys the branch you pick, e.g. to preview develop)
 # Only the app is published: it carries the library's power structures and metrics,
 # never its titles or descriptions (see build-app.mjs). The library review page
 # (npm run review) is NOT deployed.
 #
-# One-time setup: Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+# One-time setup: Settings → Pages → Build and deployment → Source: "GitHub Actions".
 
 on:
-  push:
-    branches: [develop]
+  workflow_call:
+    inputs:
+      use-artifact:
+        description: Deploy the `app` artifact already uploaded in this run instead of building
+        type: boolean
+        default: false
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
   build:
+    if: ${{ !inputs.use-artifact }}
+    uses: ./.github/workflows/build.yml
+    with:
+      artifact: app
+
+  deploy:
+    needs: build
+    # run after a successful build, or straight away when the caller supplies the artifact
+    if: ${{ !cancelled() && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/download-artifact@v8
         with:
-          node-version: 24
-          cache: npm
-      # Validate the engine before shipping the app.
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+          name: app
+          path: dist
+
       - name: Assemble site
         run: |
           mkdir -p _site
           cp dist/zwo-workout-builder.html _site/index.html
-          touch _site/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
+
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

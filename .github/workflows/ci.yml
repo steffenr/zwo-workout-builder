@@ -1,29 +1,23 @@
 name: CI
 
-# Engine tests and app build on every push to develop and on pull requests into develop.
+# Engine tests + app build on pushes to develop and on pull requests into develop.
+# Docs-only changes are skipped; a newer push cancels the running check for the same ref.
 
 on:
   push:
     branches: [develop]
+    paths-ignore: ['**.md']
   pull_request:
     branches: [develop]
+    paths-ignore: ['**.md']
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    name: test + build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+  build:
+    uses: ./.github/workflows/build.yml

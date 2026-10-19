@@ -1,50 +1,87 @@
 name: Release
 
-# Builds the app from the tagged source and publishes a GitHub Release whenever a
-# v* tag is pushed (usually by prepare-release.yml). The release carries:
-#   - zwo-workout-builder.html            the app, one self-contained offline file
-#   - zwo-workout-builder-vX.Y.Z.html     the same file with the version in its name
-# Release notes are generated from the commits since the previous tag.
-# The default GITHUB_TOKEN is enough here (contents: write); no secrets needed.
+# Release pipeline:  build  →  GitHub Release  →  GitHub Pages
+# Every stage needs the one before it, and the Release and Pages ship the same
+# tested artifact, so the published site is always the latest released app.
+#
+# Runs
+#   - as the second half of prepare-release.yml (workflow_call) — the normal path
+#   - when a release is published in the GitHub UI (Releases → Draft a new release);
+#     the app files are attached to that release and the site is redeployed
+#   - manually: Actions → "Release" → Run workflow → tag (re-publishes an existing
+#     tag's assets and redeploys it to Pages, e.g. to roll the site back)
 
 on:
-  push:
-    tags: ['v*']
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)release and deploy, e.g. v0.1.2
+        type: string
+        required: true
+  release:
+    types: [published]
+
+permissions:
+  contents: read
 
 jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: refs/tags/${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
+      artifact: app
+
   publish:
+    name: GitHub Release
+    needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
+    env:
+      TAG: ${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
+      VERSION: ${{ needs.build.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # previous tags for the generated release notes
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
       - name: Check the tag matches package.json
-        shell: bash
         run: |
-          PKG="v$(node -p "require('./package.json').version")"
-          if [ "$PKG" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${PKG}."
+          if [ "v${VERSION}" != "${TAG}" ]; then
+            echo "::error::Tag ${TAG} does not match package.json version v${VERSION}."
             exit 1
           fi
-      - name: Create GitHub Release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: app
+          path: dist
+
+      - name: Create or update the GitHub Release
         run: |
           cp dist/zwo-workout-builder.html "dist/zwo-workout-builder-${TAG}.html"
-          gh release create "$TAG" \
-            --title "Zwo Workout Builder ${TAG}" \
-            --generate-notes \
-            --verify-tag \
-            dist/zwo-workout-builder.html \
-            "dist/zwo-workout-builder-${TAG}.html"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" --clobber \
+              dist/zwo-workout-builder.html "dist/zwo-workout-builder-${TAG}.html"
+          else
+            gh release create "$TAG" \
+              --title "Zwo Workout Builder ${TAG}" \
+              --generate-notes \
+              --verify-tag \
+              dist/zwo-workout-builder.html "dist/zwo-workout-builder-${TAG}.html"
+          fi
+
+  pages:
+    name: GitHub Pages
+    needs: publish
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      use-artifact: true
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

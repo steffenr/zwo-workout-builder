@@ -223,20 +223,31 @@ outdoor day, comeback with far more time than current fitness, two days a week) 
 
 ## Releases and deployment
 
-Three GitHub Actions workflows in `.github/workflows/` (same setup as timelinr-ts):
+GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `deploy-pages.yml` | push to `develop`, or manual | runs `npm test` and `npm run build`, publishes `dist/zwo-workout-builder.html` as `index.html` on GitHub Pages |
-| `prepare-release.yml` | manual: Actions → "Prepare release" → patch / minor / major | CI gate, bumps the version in `package.json` / `package-lock.json`, commits `chore(release): X`, pushes the branch and tag `vX` |
-| `release.yml` | push of a `v*` tag | tests and builds the tagged source, checks the tag matches `package.json`, creates a GitHub Release with `zwo-workout-builder.html` (and a versioned copy) attached and generated notes |
+| `build.yml` | reusable (called by the others) | `npm ci`, `npm test`, `npm run build`; optionally uploads `dist/zwo-workout-builder.html` as an artifact |
+| `ci.yml` | push to `develop`, pull requests into `develop` (docs-only changes skipped) | runs `build.yml` |
+| `prepare-release.yml` | manual: Actions → "Prepare release" → patch / minor / major | CI gate, bumps the version in `package.json` / `package-lock.json`, commits `chore(release): X`, pushes branch and tag `vX`, then runs `release.yml` |
+| `release.yml` | called by `prepare-release.yml`, a release published in the GitHub UI, or manual (tag input) | pipeline **build → GitHub Release → GitHub Pages**: tests and builds the tag, checks it matches `package.json`, creates the Release or attaches to it (`zwo-workout-builder.html` + a versioned copy), then runs `deploy-pages.yml` with the same file |
+| `deploy-pages.yml` | called by `release.yml`, or manual (any branch) | publishes the app as `index.html` on GitHub Pages; run manually it builds the chosen branch first |
+
+GitHub Pages therefore always shows the latest release. Running "Release" manually with an
+older tag re-publishes that tag's assets and redeploys it (rollback).
 
 One-time setup:
 
 - **Pages:** Settings → Pages → Build and deployment → Source: **GitHub Actions**.
-- **Release token:** add a repository secret `RELEASE_PAT` (Personal Access Token with
-  Contents: Read & write, owner may push to `develop`). The default `GITHUB_TOKEN` can't be
-  used for the tag push, because pushes made with it don't start other workflows.
+- **Pages environment:** releases cut with "Prepare release" deploy from `develop`, which the
+  `github-pages` environment already allows. A release published in the GitHub UI deploys from
+  its tag, so add a tag rule `v*` under Settings → Environments → github-pages → Deployment
+  branches and tags.
+- **Releasing from the UI:** bump `version` in `package.json` on `develop` first and tag that
+  commit `vX.Y.Z`; the pipeline stops before attaching files or deploying if tag and
+  `package.json` differ. "Prepare release" does the bump for you.
+- No secrets needed: everything runs with the default `GITHUB_TOKEN` (`develop` must stay
+  pushable by GitHub Actions, i.e. no branch protection that blocks it).
 
 `npm test` exits non-zero when a check reports a problem, so a broken engine stops both
-the deployment and the release.
+the release and the deployment.
