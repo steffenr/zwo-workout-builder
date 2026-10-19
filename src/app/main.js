@@ -399,7 +399,7 @@ function stepWeek() {
   const tiles = S.days.map((d, i) => `
     <div class="day ${d.on ? 'on' : ''}">
       <button type="button" class="dtog" data-day-toggle="${i}" aria-pressed="${d.on}" aria-label="${DAY_NAMES[i]}: ${d.on ? 'riding, tap for rest' : 'rest, tap to ride'}"><b>${DAY_NAMES[i]}</b><small>${d.on ? (d.outdoor ? 'Outdoor' : 'Indoor') : 'Rest'}</small></button>
-      ${d.on ? `<div class="stepper"><button type="button" class="btn round" data-day-step="${i}" data-delta="-15" aria-label="${DAY_NAMES[i]} shorter">−</button><output title="${fmtDur(+d.minutes)}">${fmtShort(+d.minutes)}</output><button type="button" class="btn round" data-day-step="${i}" data-delta="15" aria-label="${DAY_NAMES[i]} longer">+</button></div>
+      ${d.on ? `<div class="stepper"><output title="${fmtDur(+d.minutes)}">${fmtShort(+d.minutes)}</output><div class="steps"><button type="button" data-day-step="${i}" data-delta="-15" aria-label="${DAY_NAMES[i]} shorter"${+d.minutes <= 30 ? ' disabled' : ''}>−</button><button type="button" data-day-step="${i}" data-delta="15" aria-label="${DAY_NAMES[i]} longer"${+d.minutes >= 300 ? ' disabled' : ''}>+</button></div></div>
       <button type="button" class="outtog" data-day-out="${i}" aria-pressed="${!!d.outdoor}" title="Outdoor rides count towards your load but get no file">Outdoor</button>` : ''}
     </div>`).join('');
   const on = S.days.filter((d) => d.on);
