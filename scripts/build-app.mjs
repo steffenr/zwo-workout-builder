@@ -31,7 +31,17 @@ const res = await build({
 });
 const js = res.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const tpl = fs.readFileSync(path.join(root, 'src/app/template.html'), 'utf8');
-const html = tpl.replace('__DATA__', () => dataB64).replace('__APP__', () => js);
+// app icon: inline in the top bar and as the favicon
+const icon = fs.readFileSync(path.join(root, 'src/app/icon.svg'), 'utf8')
+  .replace(/<\?xml[^>]*>|<!DOCTYPE[^>]*>|<metadata>[\s\S]*?<\/metadata>/g, '') // keep only the drawing
+  .replace(/\s+xmlns:c2pa="[^"]*"/, '')
+  .trim();
+const iconUri = `data:image/svg+xml;base64,${Buffer.from(icon).toString('base64')}`;
+const html = tpl
+  .replace('__ICON_URI__', () => iconUri)
+  .replace('__ICON__', () => icon.replace('<svg ', '<svg aria-hidden="true" '))
+  .replace('__DATA__', () => dataB64)
+  .replace('__APP__', () => js);
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, html);
 const dataKb = (dataB64.length / 1024).toFixed(0);
