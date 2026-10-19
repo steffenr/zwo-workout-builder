@@ -1,7 +1,7 @@
 {
   "type": "module",
   "name": "zwo-workout-builder",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "index": "node scripts/build-index.mjs .. data && node scripts/derive-rules.mjs data",
