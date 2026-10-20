@@ -64,6 +64,10 @@ Plan ZIP layout:
 Copy the `.zwo` files into Zwift's `Documents/Zwift/Workouts/<user id>/`, or import the
 `.ictx` files into icTrainer. Power targets are % of FTP, so the files work for any FTP.
 
+The layout is mobile first: on phones the wizard's Back / Next buttons stay at the bottom
+of the screen and workout details open as a bottom sheet; tablets and desktops get the wider
+layouts with the summary sidebar.
+
 Clicking the logo returns to the mode selection; answers and the last result are kept.
 The colour theme (Match system / Light / Dark) is in Settings (gear icon, top right); the
 cup icon (and the footer link) goes to Buy Me a Coffee, the last icon opens this repository

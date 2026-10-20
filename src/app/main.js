@@ -277,7 +277,7 @@ function openSettings(anchor) {
   pop.hidden = false;
   const r = anchor.getBoundingClientRect();
   pop.style.top = `${r.bottom + 8}px`;
-  pop.style.left = `${Math.max(16, r.right - pop.offsetWidth)}px`;
+  pop.style.left = `${Math.max(16, Math.min(r.right, window.innerWidth - 16) - pop.offsetWidth)}px`;
   anchor.setAttribute('aria-expanded', 'true');
 }
 function closePopover() {
@@ -361,7 +361,7 @@ function stepRider() {
       <div class="frow"><span>Structured training</span>
         <span class="seg-ctl" role="group" aria-label="Structured training experience">${yrs.map((y, i) => `<button type="button" class="${+S.years === i ? 'on' : ''}" data-set="years" data-val="${i}" aria-pressed="${+S.years === i}">${y}</button>`).join('')}</span></div>
     </div>
-    <div class="stats" style="--cols:3;background:var(--surface-2);border-radius:12px;padding:14px 16px">
+    <div class="stats inset">
       <div><span class="k">W/kg</span><b>${ath.wkg.toFixed(2)}</b></div>
       <div><span class="k">Status</span><b class="txt">${ath.levelLabel}</b></div>
       <div><span class="k">TSS / week now</span><b>${ath.startTss}</b></div>
@@ -487,7 +487,7 @@ function resultPlan() {
       <p class="meta">${esc(plan.goal)} · ${esc(STYLES[plan.style]?.label || plan.style)} · ${a.levelLabel}, ${a.wkg.toFixed(2)} W/kg</p></div>
       <div class="actions"><button type="button" class="btn ghost" data-act="edit">Change answers</button><button type="button" class="btn" data-act="shuffle">Shuffle workouts</button><button type="button" class="btn primary" data-act="dl-plan">${DL_ICON}Download plan (.zip)</button></div>
     </div>
-    <div class="card section stats plan" style="--cols:5">
+    <div class="card section stats plan">
       <div><span class="k">Weeks</span><b>${plan.weeks.length}</b></div>
       <div><span class="k">Workouts</span><b>${plan.totals.workouts}</b></div>
       <div><span class="k">Hours</span><b>${plan.totals.hours}</b></div>
@@ -495,9 +495,9 @@ function resultPlan() {
       <div><span class="k">TSS / week</span><b>${Math.round(plan.totals.tss / plan.weeks.length)}</b></div>
     </div>
     <div class="card load" style="margin-top:12px" aria-label="Weekly load">
-      <div class="wk-head" style="margin:0"><span class="eyebrow">Weekly load (TSS)</span>
+      <div class="wk-head"><span class="eyebrow">Weekly load (TSS)</span>
         <span class="legend"><span><i style="background:var(--accent)"></i>Build</span><span><i style="background:color-mix(in srgb, var(--accent) 35%, var(--surface))"></i>Recovery</span><span><i style="background:var(--line-strong)"></i>Taper</span><span><i class="tgt"></i>Target</span></span></div>
-      <div class="lbars">${bars}</div>
+      <div class="lbars${plan.weeks.length > 12 ? ' dense' : ''}">${bars}</div>
       <div class="lweeks">${weekLabels}</div>
     </div>
     <p class="hint" style="margin-top:14px">Select a workout for its details. The ZIP holds one folder with every workout as .zwo and .ictx (icTrainer), named Week/Day in plan order, plus an overview.</p>
@@ -565,7 +565,7 @@ function renderModal() {
       <div><div class="eyebrow">${esc(eyebrow)} ${zoneTag(w.category)}</div><h2>${esc(w.name)}</h2></div>
       <button type="button" class="icon-btn" data-act="close" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
-    <div class="stats" style="--cols:4">
+    <div class="stats pv-stats">
       <div><span class="k">Duration</span><b>${fmtDur(w.durMin)}</b></div>
       <div><span class="k">TSS</span><b>${Math.round(w.metrics.tss)}</b></div>
       <div><span class="k">IF</span><b>${w.metrics.IF.toFixed(2)}</b></div>
