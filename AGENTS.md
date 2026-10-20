@@ -47,7 +47,11 @@ plans and workouts from wizard input plus `library.json` and `rules.json`
 `render()`). `scripts/build-app.mjs` bundles it with esbuild into
 `dist/zwo-workout-builder.html`: the engine data goes in as gzip + base64 (decompressed in
 the browser with `DecompressionStream`), and `src/app/icon.svg` is inlined in the top bar
-and as the favicon.
+and as the favicon. Next to the HTML it also emits the PWA assets so the hosted app can be
+installed to the home screen and work offline: `manifest.webmanifest`, `sw.js` (the service
+worker, its cached shell is generated from the shipped files), and PNG icons from
+`src/app/icons.json` (regenerated from `icon.svg` when the icon changes, scaled for
+`purpose: any` and `maskable`).
 
 ## Rules that must hold
 
@@ -110,6 +114,10 @@ and as the favicon.
   mode. The page body must never scroll horizontally; controls must stay inside their
   tiles and cards at 390 px.
 - Copy: short, plain English, active voice, no mention of the library.
+- The install hint (bottom-right card, `#install-hint`) is the only engagement element;
+  it shows in the browser only when the PWA assets are served next to the page, is
+  dismissible (remembered in `localStorage` under `zwo-builder-install-dismissed`), and
+  calls `beforeinstallprompt` when available. Keep it quiet: one card, no overlay.
 
 ## Releases and deployment
 
@@ -120,7 +128,8 @@ and as the favicon.
   hand. Pull `develop` after a release before pushing new commits.
 - GitHub Pages is deployed only by the release pipeline (or a manual run of
   `deploy-pages.yml`), so it always shows the latest release, not the tip of `develop`. Only
-  the built app goes to Pages, never `data/`, the snapshot or the library review page.
+  the built app goes to Pages (the HTML as `index.html` plus the PWA assets), never
+  `data/`, the snapshot or the library review page.
 - `ci.yml` runs `npm test` and `npm run build` on pushes and pull requests to `develop`
   (Markdown-only changes are skipped). Both must pass on Linux with a clean `npm ci`.
 

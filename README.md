@@ -13,11 +13,21 @@ FTP, training status, goal, weekly schedule and preferred style.
 
 No AI service, no server, no account: the app is one HTML file.
 
+The hosted copy also works as an installable offline app: add it to your home screen
+(itself a small info card) and it runs without an internet connection. The app ships
+with a service worker and a web app manifest that cache the whole app shell.
+
 ## Using the app
 
 Use the hosted copy on GitHub Pages (<https://steffenr.github.io/zwo-workout-builder/>, always
-the latest release), download `zwo-workout-builder.html` from a GitHub Release, or build it
+the latest release), download the app files from a GitHub Release, or build it
 yourself and open **`dist/zwo-workout-builder.html`** in a browser.
+
+On the hosted copy (and on any web server), the app can be added to the home screen
+(Chrome/Edge: menu → "Install page as app", Safari: Share → "Add to Home Screen",
+Android: "Add to Home screen"). The small info card in the bottom right corner offers
+this too. After installation the app starts like a native app and works fully offline;
+a service worker keeps it cached between updates.
 
 1. **Mode** — training plan or single workout
 2. **Rider** — FTP, weight, hours per week over the last 4–6 weeks, structured-training experience
@@ -84,7 +94,8 @@ zwoWorkoutBuilder/
 │   │   ├── ictx.js          .ictx (icTrainer) XML writer, port of the WoZ converter
 │   │   ├── blocks.js        block constructors, compact encoding
 │   │   └── rng.js           seeded PRNG + hash (same answers → same plan)
-│   ├── app/                 wizard UI: main.js, template.html (tokens + CSS), icon.svg (app icon / favicon)
+│   ├── app/                 wizard UI: main.js, template.html (tokens + CSS), icon.svg (app icon / favicon),
+│   │                        sw.js (service worker, offline + installable), icons.json (PWA PNGs from icon.svg)
 │   └── browser/             template of the library review page
 ├── scripts/
 │   ├── build-index.mjs      library → data/*.json
@@ -92,7 +103,7 @@ zwoWorkoutBuilder/
 │   ├── check-labels.mjs     labels vs. coach-given titles (quality check)
 │   ├── test-engine.mjs      sample athletes → plans, checks
 │   ├── build-browser.mjs    dist/library-index.html
-│   └── build-app.mjs        dist/zwo-workout-builder.html (esbuild bundle + data)
+│   └── build-app.mjs        dist/zwo-workout-builder.html + PWA assets (manifest, sw.js, PNG icons)
 ├── data/                    generated knowledge base (see below), committed
 ├── dist/                    generated pages (not committed)
 ├── library-snapshot.tar.gz  the source .zwo library, to regenerate data/
@@ -260,7 +271,7 @@ GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `build.yml` | reusable (called by the others) | `npm ci`, `npm test`, `npm run build`; optionally uploads `dist/zwo-workout-builder.html` as an artifact |
+| `build.yml` | reusable (called by the others) | `npm ci`, `npm test`, `npm run build`; optionally uploads the app folder (`dist/zwo-workout-builder.html` + PWA assets) as an artifact |
 | `ci.yml` | push to `develop`, pull requests into `develop` (docs-only changes skipped) | runs `build.yml` |
 | `prepare-release.yml` | manual: Actions → "Prepare release" → patch / minor / major | CI gate, bumps the version in `package.json` / `package-lock.json`, commits `chore(release): X`, pushes branch and tag `vX`, then runs `release.yml` |
 | `release.yml` | called by `prepare-release.yml`, a release published in the GitHub UI, or manual (tag input) | pipeline **build → GitHub Release → GitHub Pages**: tests and builds the tag, checks it matches `package.json`, creates the Release or attaches to it (`zwo-workout-builder.html` + a versioned copy), then runs `deploy-pages.yml` with the same file |

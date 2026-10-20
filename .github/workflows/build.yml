@@ -1,8 +1,9 @@
 name: Build
 
 # Reusable stage: engine tests + app build. Called by ci.yml and release.yml.
-# With `artifact` set, it uploads dist/zwo-workout-builder.html so the later
-# stages of the same run (GitHub Release, Pages) ship exactly the tested file.
+# With `artifact` set, it uploads the app folder (zwo-workout-builder.html plus the
+# PWA assets: service worker, manifest, icons) so the later stages of the same
+# run (GitHub Release, Pages) ship exactly the tested files.
 
 on:
   workflow_call:
@@ -48,10 +49,19 @@ jobs:
       - id: meta
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
+      # Stage exactly the app files that ship: the self-contained HTML plus the
+      # PWA assets (service worker, manifest, icons) it is built next to.
+      # upload-artifact has no include-globs, so copy to a clean directory.
+      - if: inputs.artifact != ''
+        run: |
+          mkdir -p app-assets
+          cp dist/zwo-workout-builder.html dist/sw.js dist/manifest.webmanifest app-assets/
+          cp dist/*.png app-assets/
+
       - if: inputs.artifact != ''
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact }}
-          path: dist/zwo-workout-builder.html
+          path: app-assets
           if-no-files-found: error
           retention-days: 7

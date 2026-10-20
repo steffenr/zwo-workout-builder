@@ -64,15 +64,17 @@ jobs:
       - name: Create or update the GitHub Release
         run: |
           cp dist/zwo-workout-builder.html "dist/zwo-workout-builder-${TAG}.html"
+          # the app ships with its PWA assets (service worker, manifest, icons)
+          assets="dist/zwo-workout-builder.html dist/zwo-workout-builder-${TAG}.html dist/sw.js dist/manifest.webmanifest"
+          for f in dist/*.png; do assets="$assets $f"; done
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" --clobber \
-              dist/zwo-workout-builder.html "dist/zwo-workout-builder-${TAG}.html"
+            gh release upload "$TAG" --clobber $assets
           else
             gh release create "$TAG" \
               --title "Zwo Workout Builder ${TAG}" \
               --generate-notes \
               --verify-tag \
-              dist/zwo-workout-builder.html "dist/zwo-workout-builder-${TAG}.html"
+              $assets
           fi
 
   pages:

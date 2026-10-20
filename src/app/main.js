@@ -783,5 +783,91 @@ $('#home').addEventListener('click', (e) => {
   window.scrollTo({ top: 0 });
 });
 
+// ---------------------------------------------------------------- PWA (offline + installable)
+// The hosted app can be added to the home screen and then runs fully offline:
+// a service worker caches the app shell, and this page is one self-contained
+// HTML file, so the cache already holds the whole app. Only active when the
+// page is served over http(s) and the PWA assets ship next to it (GitHub Pages,
+// a local server). Not from a file:// copy, and not in the embedded view.
+function pwaReady() {
+  if (!('serviceWorker' in navigator) || inArtifact()) return false;
+  const host = location.hostname;
+  return location.protocol === 'https:' || (location.protocol === 'http:' && (host === 'localhost' || host === '127.0.0.1'));
+}
+let dismissedInstall = false;
+try { dismissedInstall = localStorage.getItem('zwo-builder-install-dismissed') === '1'; } catch { /* storage unavailable */ }
+const isStandalone = 'matchMedia' in window && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+let deferredPrompt = null;
+const hintEl = () => $('#install-hint');
+function hintDismiss() {
+  dismissedInstall = true;
+  try { localStorage.setItem('zwo-builder-install-dismissed', '1'); } catch { /* ignore */ }
+  hintEl().hidden = true;
+}
+/** Platform-specific steps shown when the browser offers no one-click prompt. */
+function hintSteps() {
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'Mac' && navigator.maxTouchPoints > 1))
+    return 'On iPhone or iPad, tap the Share button in Safari, then “Add to Home Screen”.';
+  if (/Android/i.test(ua)) return 'On Android, open the browser menu and tap “Add to Home screen”.';
+  if (/Edg\//.test(ua)) return 'In Edge, open the menu and choose “Save and share → Install page as app”.';
+  if (/Chrome/.test(ua)) return 'In Chrome, open the menu and choose “Install page as app”.';
+  return 'Use your browser’s “Install app” or “Add to Home screen” option.';
+}
+function renderHint() {
+  const el = hintEl();
+  el.hidden = !(pwaReady() && !isStandalone && !dismissedInstall && (deferredPrompt || pwaAssetsKnown));
+  // With a one-click prompt the button replaces the manual steps; without it
+  // the button is hidden and the steps are shown instead.
+  const btn = el.querySelector('[data-hint-action="install"]');
+  const steps = el.querySelector('.hint-steps');
+  btn.hidden = !deferredPrompt;
+  steps.hidden = !!deferredPrompt;
+  steps.textContent = hintSteps();
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest?.('#install-hint [data-hint-action]');
+  if (!t) return;
+  if (t.dataset.hintAction === 'dismiss') { hintDismiss(); return; }
+  if (t.dataset.hintAction === 'install') {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choice) => {
+        if (choice.outcome === 'accepted') hintDismiss();
+        else renderHint(); // declined: it stays, still closable with ×
+        deferredPrompt = null;
+      });
+    } else toast(hintSteps());
+  }
+});
+let pwaAssetsKnown = false; // the PWA assets (manifest, worker, icons) are served next to the page
+function initPwa() {
+  if (!pwaReady()) return;
+  // Listeners first: Chrome fires beforeinstallprompt early in page load, and
+  // it must be prevented to keep its own prompt from fighting our hint.
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pwaAssetsKnown = true; deferredPrompt = e; renderHint(); });
+  window.addEventListener('appinstalled', () => { deferredPrompt = null; hintDismiss(); });
+  // Then wire up the offline part only where the PWA assets are actually
+  // served next to the page (a plain file copy keeps working without them).
+  fetch('manifest.webmanifest', { method: 'HEAD', cache: 'no-store' })
+    .then((r) => r.ok ? r : null)
+    .then(async (r) => {
+      if (!r) return;
+      pwaAssetsKnown = true;
+      for (const [rel, href] of [['manifest', 'manifest.webmanifest'], ['apple-touch-icon', '512.png']]) {
+        const l = document.createElement('link');
+        l.rel = rel;
+        l.href = href;
+        document.head.appendChild(l);
+      }
+      try { await navigator.serviceWorker.register('sw.js'); } catch (e) { console.warn('Service worker unavailable:', e); }
+      renderHint();
+    })
+    .catch(() => {});
+  renderHint();
+}
+initPwa();
+
 applyTheme();
 dataReady.then(() => { render(); });

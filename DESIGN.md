@@ -106,7 +106,7 @@ Headings use `letter-spacing: -0.01em`. Numbers in columns always use tabular fi
 | Radius | dialog 18 px · cards 14 px (`--radius`) · popover 12 px · day tiles 12 px · buttons and inputs 10 px · rows 11 px · small buttons 8 px · tags 5–6 px · pills 99 px · round buttons 50 % |
 | Elevation | `--shadow` subtle on cards (none in dark) · `--shadow-lg` for dialog, popover, toast · dark mode relies on borders |
 
-Z-index: top bar 5 · toast 100 · popover 200 (the dialog uses the browser's top layer).
+Z-index: top bar 5 · install hint 90 · toast 100 · popover 200 (the dialog uses the browser's top layer).
 
 ## Layout
 
@@ -177,6 +177,7 @@ The body never scrolls horizontally (checked at 390 px).
 | **Inputs** | `--surface`, 1 px `--line-strong`, radius 10, padding 8 × 12, 14 px; focus = accent border + 3 px `--accent-soft` ring. Number inputs right-aligned in `--num`. Checkboxes and ranges use `accent-color`. |
 | **Footer** `.foot` | 12.5 px muted note under the page; links in `--text-2`, underlined, `--text` on hover ("Buy me a coffee"). |
 | **Toast** `.toast` | inverted, radius 12, bottom centre, 3.5 s, short plain English. |
+| **Install hint** `.install-hint` | small card bottom right (full width on mobile): title "Run the app offline", one line of text, an "Install app" button (only where the browser exposes `beforeinstallprompt`) and a ✕ top right. Shown once, dismissals remembered per browser; hidden in the installed (standalone) view. No overlay, no shadow trap — the card sits above the content. |
 
 ### Builder-specific
 
@@ -201,7 +202,17 @@ buttons.
 The app icon is `src/app/icon.svg` (black rounded tile with rising bars in the zone fills).
 `build-app.mjs` strips its XML prolog and metadata, inlines it in the top bar
 (`aria-hidden`, 26 px) and embeds it as an SVG data-URI favicon. Edit only that file; the
-icon's colours are the one place where literal hex values are allowed.
+icon's colours are the one place where literal hex values are allowed. The PWA icons are
+PNGs generated from the same SVG into `src/app/icons.json` (`any` at 192/512/1024,
+`maskable` scaled to 82 % inside the square) — regenerate them when the icon changes.
+
+## Offline and install (PWA)
+
+The app is one self-contained HTML file, so "offline" mostly means it keeps working when
+the network drops: on the web a service worker (`sw.js`, cached shell = the page itself,
+manifest and icons) caches it, and the install hint card offers to add it to the home
+screen. Both activate only where the PWA assets are served next to the page — a plain
+`file://` copy still opens and works, just without the cache and the hint.
 
 ## Interaction rules
 
