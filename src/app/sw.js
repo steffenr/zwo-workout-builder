@@ -42,8 +42,12 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
+          // Only keep good pages: an error page (404/5xx) must never replace
+          // the cached app.
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
           return res;
         })
         .catch(async () => (await caches.match(req)) || (await caches.match(APP_PAGE)) || Response.error())
