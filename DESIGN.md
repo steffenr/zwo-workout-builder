@@ -85,14 +85,14 @@ No web fonts: the offline file renders the same everywhere.
 
 | Element | Size and weight |
 |---|---|
-| `h1` | 26 px, 650 (step titles, plan name) |
-| `h2` | 19 px (dialog title) |
+| `h1` | 22 px on phones, 26 px from 760 px, 650 (step titles, plan name) |
+| `h2` | 18 px / 19 px (dialog title) |
 | `h3` | 15 px (card titles) |
 | `.meta` | 13.5 px, muted |
 | `.small` | 13 px |
 | `.k` labels | 11 px, uppercase, letter-spacing .08em, 600, muted |
 | `.eyebrow` | 11.5 px, uppercase, .09em |
-| Stats values | 22 px `--num`, 600 |
+| Stats values | 20 px on phones, 22 px from 600 px, `--num`, 600 |
 
 Headings use `letter-spacing: -0.01em`. Numbers in columns always use tabular figures.
 
@@ -101,7 +101,7 @@ Headings use `letter-spacing: -0.01em`. Numbers in columns always use tabular fi
 | Category | Values |
 |---|---|
 | Spacing | 4 · 6 · 8 · 10 · 12 · 14 · 16 · 20 · 24 · 32 px |
-| Page | `.view` max-width 1120 px, padding 24 px (safe-area aware) |
+| Page | `.view` max-width 1120 px, padding 16 px on phones, 24 px from 760 px (safe-area aware) |
 | Sections | `.section` margin-top 32 px; week headers 26 px above their list |
 | Radius | dialog 18 px · cards 14 px (`--radius`) · popover 12 px · day tiles 12 px · buttons and inputs 10 px · rows 11 px · small buttons 8 px · tags 5–6 px · pills 99 px · round buttons 50 % |
 | Elevation | `--shadow` subtle on cards (none in dark) · `--shadow-lg` for dialog, popover, toast · dark mode relies on borders |
@@ -128,29 +128,45 @@ Z-index: top bar 5 · install hint 90 · toast 100 · popover 200 (the dialog us
   `.topbar-inner` aligned with `#view` (max 1120 px). Brand left (30 px app icon with radius 7,
   21 px `zwo<b>WorkoutBuilder</b>`, `b` accent 600; links back to the mode selection). Right
   (`.nav-links`): text link zwoTrainer (website; 15 px / 500, `--text-2`, `--surface-2` on
-  hover, radius 10), then GitHub (`#link-github`, GitHub mark) and Buy me a coffee
+  hover, radius 10; from 760 px), then GitHub (`#link-github`, GitHub mark) and Buy me a coffee
   (`#link-coffee`, cup) as icon-only links (`a.ico`, 38 × 38, 18 px icon, label in
   `title` + `aria-label`), then Settings (`.nav-btn`, gear) as the last item. External links
-  open in a new tab. Below 720 px the brand drops to 18 px / 26 px icon and the zwoTrainer
-  link is hidden. Nothing else; new options go in Settings.
+  open in a new tab. On phones the bar is 56 px, the brand 18 px with a 26 px icon, the
+  icon links 40 × 40 and the zwoTrainer link is hidden. Nothing else; new options go in Settings.
 - **Step tabs** (`.tabs`): numbered steps; current = accent underline and filled number,
-  done = check in soft accent, future = disabled until a result exists. On phones only the
+  done = check in soft accent, future = disabled until a result exists. Below 760 px only the
   current step shows its label.
 - **Wizard:** the step card (`.card.step`) plus a 280 px sticky summary card ("Your answers").
   Each step ends with an action row: validation hint left, Back (ghost), Next / Build
-  (primary, last).
+  (primary, last). On phones the row is sticky at the bottom of the screen (hint on its own
+  line above the buttons).
 - **Result:** plan head (eyebrow, h1, meta; actions right), stats card, weekly load card,
   hint, then one `.wk-head` + `.wlist` per week.
 
-### Responsive
+### Responsive (mobile first)
 
-| Width | Change |
+The base CSS is the phone layout (from 320 px); wider layouts are added with `min-width`
+queries. Touch sizes are the default; mouse users get the compact desktop sizes through
+`(hover: hover) and (pointer: fine)`, so a touch tablet keeps large targets at any width.
+Hover effects only apply under `(hover: hover)`.
+
+| Width | Layout |
 |---|---|
-| ≤ 1100 px | workout rows drop the mini profile |
-| ≤ 980 px | summary moves above the step card as a compact grid; rows drop the duration |
-| ≤ 760 px | step labels only for the current step; day tiles in two columns; form rows wrap; plan head stacks; dialog stats in two columns |
+| base (phones) | 16 px page gutter; 56 px top bar (zwoTrainer link hidden); step tabs show only the current label; step card first, "Your answers" below it (2 columns, no week strip); step actions are a sticky bar at the bottom of the screen with Back and Next sharing the width; form rows wrap (sliders and segmented controls full width, equal segments); goal cards in 2 columns, day tiles in 2; workout rows show day · title · zone + TSS; plan head stacked, secondary actions side by side and the primary download full width below them; plan stats in 3 columns; the workout dialog is a bottom sheet with pinned actions |
+| ≥ 480 px | day tiles in 3 columns; rider readout in 3 columns |
+| ≥ 600 px | cards 20 px padding; "Your answers" above the step as a 4-column grid; day tiles in 4; workout rows add the duration; the dialog is the centred 760 px dialog |
+| ≥ 760 px | 24 px gutter, 64 px top bar with the zwoTrainer link; all step labels; step actions back inside the card (right-aligned); day tiles in 7 columns; plan stats in 5 |
+| ≥ 980 px | "Your answers" becomes the 280 px sticky sidebar; plan head with actions on the right |
+| ≥ 1100 px | workout rows add the mini profile |
+| < 360 px | the only `max-width` rule: a smaller wordmark in the top bar |
 
-The body never scrolls horizontally (checked at 390 px).
+- Touch targets are at least 44 px (buttons, tabs, inputs, check boxes' labels, day-tile
+  toggles, stepper halves 44 × 36); chips 40 px, segmented items 38 px, Outdoor toggle 32 px.
+- Inputs use 16 px text on touch devices so iOS does not zoom in.
+- The viewport uses `viewport-fit=cover`; top bar, page, sticky bars, toast and install hint
+  respect the safe-area insets.
+- The body never scrolls horizontally (checked at 320, 390, 768 and 1280 px; the step tabs
+  scroll inside their own row if they don't fit).
 
 ## Components
 
@@ -169,7 +185,7 @@ The body never scrolls horizontally (checked at 390 px).
 | **Zone tag** `.ztag` | zone fill, black 11 px 650 "Z1–Z5", radius 5, min-width 26. |
 | **Zone chip** `.zchip` | zone-filter pattern: outlined, 9 px coloured dot; on = border in its colour and 16 % background. Uses the zone fill for training types and weak spots, the accent for other choices (rider type, "Pick for me"). |
 | **Badge** `.badge` | 11 px 700, radius 6; `.muted` (phase), `.warn` (time-limited), `.ok`. |
-| **Dialog** `dialog` | radius 18, `--shadow-lg`, blurred `--backdrop`, width 760. `.pv-head` with eyebrow + title left and ✕ right; actions in `.modal-actions`: Swap (ghost, left), Download .ictx, Download .zwo (primary, last). Esc and backdrop click close it. |
+| **Dialog** `dialog` | radius 18, `--shadow-lg`, blurred `--backdrop`, width 760. `.pv-head` with eyebrow + title left and ✕ right; actions in `.modal-actions`: Swap (ghost, left), Download .ictx, Download .zwo (primary, last). Esc and backdrop click close it. Below 600 px it is a bottom sheet (full width, top corners rounded) whose action row stays pinned to the bottom. |
 | **Profile** `.pv-diagram` | `--surface-2` box, radius 12, watt axis as HTML ticks on the left (never SVG text), dashed `--ftp` line, bars stretch (`preserveAspectRatio="none"`). |
 | **Segment info** `.seg-info` | one 13.5 px line: kind · duration · target watts in zone ink (+ % FTP, zone, rpm). Updates on hover/tap; the selected bar gets an accent outline. |
 | **Zones bar / legend** | 10 px bar with 2 px gaps; legend with 9 px squares, zone name and minutes. |
@@ -241,7 +257,8 @@ screen. Both activate only where the PWA assets are served next to the page — 
 
 - [ ] Only tokens and zone colours; no new raw colours.
 - [ ] Same as zwoTrainer where a shared component exists; new patterns documented here.
-- [ ] Checked in light **and** dark, at 1280 px and 390 px.
+- [ ] Mobile first: base rules for phones, wider layouts in `min-width` queries, compact sizes only under `(pointer: fine)`.
+- [ ] Checked in light **and** dark, at 1280, 768, 390 and 320 px; touch targets ≥ 44 px.
 - [ ] Top bar unchanged (brand · zwoTrainer · GitHub · coffee · Settings); new options in the Settings popover.
 - [ ] Profile text is HTML, never stretched SVG text.
 - [ ] Interpolated text is escaped with `esc()`.
