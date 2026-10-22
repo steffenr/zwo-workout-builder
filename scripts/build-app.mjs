@@ -44,7 +44,8 @@ delete rules.typeTransitions;
 
 // Compress the JSON data with gzip to reduce bundle size, encode as base64 for embedding.
 // The browser decompresses it at runtime with the built-in DecompressionStream API.
-const jsonData = JSON.stringify({ library, rules }).replace(/</g, '\u003c');
+// Gzip + base64 output contains no '<', so no HTML escaping is needed here.
+const jsonData = JSON.stringify({ library, rules });
 const compressed = gzipSync(Buffer.from(jsonData, 'utf8'));
 const dataB64 = compressed.toString('base64');
 
