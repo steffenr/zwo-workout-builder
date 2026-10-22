@@ -17,6 +17,10 @@ on:
       tag:
         type: string
         required: true
+      version:
+        description: package.json version of the `app` artifact uploaded by the caller
+        type: string
+        required: true
   # Run it on the tag itself ("Use workflow from" → Tags → vX.Y.Z). No free-text ref
   # input: building an arbitrary ref here would run untrusted code in the
   # default-branch cache scope (CodeQL actions/cache-poisoning).
@@ -29,23 +33,26 @@ permissions:
 
 jobs:
   build:
-    # a manual run must be started on a tag
-    if: github.event_name != 'workflow_dispatch' || github.ref_type == 'tag'
+    # prepare-release (workflow_call) already built and uploaded the tagged app;
+    # a release event or a manual run on a tag builds the run's own commit (the tag)
+    # (a called workflow sees the caller's event, so the version input tells them apart)
+    if: inputs.version == '' && (github.event_name != 'workflow_dispatch' || github.ref_type == 'tag')
     uses: ./.github/workflows/build.yml
     with:
-      ref: refs/tags/${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
       artifact: app
 
   publish:
     name: GitHub Release
     needs: build
+    # after our own build, or with the caller's artifact (build skipped for workflow_call)
+    if: ${{ !cancelled() && (needs.build.result == 'success' || (inputs.version != '' && needs.build.result == 'skipped')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
     env:
       TAG: ${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
-      VERSION: ${{ needs.build.outputs.version }}
+      VERSION: ${{ inputs.version || needs.build.outputs.version }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
@@ -80,6 +87,8 @@ jobs:
   pages:
     name: GitHub Pages
     needs: publish
+    # explicit, since the skipped build job would otherwise skip this stage too
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
     uses: ./.github/workflows/deploy-pages.yml
     with:
       use-artifact: true

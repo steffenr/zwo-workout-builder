@@ -277,8 +277,8 @@ GitHub Actions workflows in `.github/workflows/`:
 |---|---|---|
 | `build.yml` | reusable (called by the others) | `npm ci`, `npm test`, `npm run build`; optionally uploads the app folder (`dist/zwo-workout-builder.html` + PWA assets) as an artifact |
 | `ci.yml` | push to `develop`, pull requests into `develop` (docs-only changes skipped) | runs `build.yml` |
-| `prepare-release.yml` | manual: Actions → "Prepare release" → patch / minor / major | CI gate, bumps the version in `package.json` / `package-lock.json`, commits `chore(release): X`, pushes branch and tag `vX`, then runs `release.yml` |
-| `release.yml` | called by `prepare-release.yml`, a release published in the GitHub UI, or manual (run on a tag via "Use workflow from") | pipeline **build → GitHub Release → GitHub Pages**: tests and builds the tag, checks it matches `package.json`, creates the Release or attaches to it (`zwo-workout-builder.html` + a versioned copy), then runs `deploy-pages.yml` with the same file |
+| `prepare-release.yml` | manual: Actions → "Prepare release" → patch / minor / major | CI gate, bumps the version in `package.json` / `package-lock.json`, commits `chore(release): X`, tags `vX`, builds the tagged app, pushes branch and tag, then runs `release.yml` with that build |
+| `release.yml` | called by `prepare-release.yml`, a release published in the GitHub UI, or manual (run on a tag via "Use workflow from") | pipeline **build → GitHub Release → GitHub Pages**: tests and builds the tag (or takes the build from `prepare-release.yml`), checks it matches `package.json`, creates the Release or attaches to it (`zwo-workout-builder.html` + a versioned copy), then runs `deploy-pages.yml` with the same file |
 | `deploy-pages.yml` | called by `release.yml`, or manual (any branch) | publishes the app as `index.html` on GitHub Pages; run manually it builds the chosen branch first |
 
 GitHub Pages therefore always shows the latest release. Running "Release" manually on an

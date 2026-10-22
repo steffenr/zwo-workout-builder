@@ -8,10 +8,6 @@ name: Build
 on:
   workflow_call:
     inputs:
-      ref:
-        description: Git ref to build (branch, tag or SHA). Empty = the triggering ref.
-        type: string
-        default: ''
       artifact:
         description: Name for the uploaded app artifact. Empty = no upload.
         type: string
@@ -32,9 +28,11 @@ jobs:
     outputs:
       version: ${{ steps.meta.outputs.version }}
     steps:
+      # Always the run's own commit: no ref input, so no caller can make this job run
+      # code from an arbitrary ref in the default-branch cache scope (CodeQL
+      # actions/cache-poisoning). prepare-release builds its new tag itself.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - uses: actions/setup-node@v7
