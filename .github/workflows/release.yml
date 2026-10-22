@@ -8,8 +8,8 @@ name: Release
 #   - as the second half of prepare-release.yml (workflow_call) — the normal path
 #   - when a release is published in the GitHub UI (Releases → Draft a new release);
 #     the app files are attached to that release and the site is redeployed
-#   - manually: Actions → "Release" → Run workflow → tag (re-publishes an existing
-#     tag's assets and redeploys it to Pages, e.g. to roll the site back)
+#   - manually: Actions → "Release" → Run workflow with "Use workflow from" set to
+#     the tag (re-publishes its assets and redeploys it to Pages, e.g. to roll back)
 
 on:
   workflow_call:
@@ -17,12 +17,10 @@ on:
       tag:
         type: string
         required: true
+  # Run it on the tag itself ("Use workflow from" → Tags → vX.Y.Z). No free-text ref
+  # input: building an arbitrary ref here would run untrusted code in the
+  # default-branch cache scope (CodeQL actions/cache-poisoning).
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing tag to (re)release and deploy, e.g. v0.1.2
-        type: string
-        required: true
   release:
     types: [published]
 
@@ -31,6 +29,8 @@ permissions:
 
 jobs:
   build:
+    # a manual run must be started on a tag
+    if: github.event_name != 'workflow_dispatch' || github.ref_type == 'tag'
     uses: ./.github/workflows/build.yml
     with:
       ref: refs/tags/${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
