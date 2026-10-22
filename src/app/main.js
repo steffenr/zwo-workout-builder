@@ -72,9 +72,30 @@ let selSeg = null; // { workoutKey: 'plan:wi,si' | 'single:i', segIndex, seg } c
 function loadState() {
   try {
     const raw = localStorage.getItem('zwo-builder-answers');
-    if (raw) return { ...structuredClone(DEFAULTS), ...JSON.parse(raw) };
+    if (raw) return sanitizeState(JSON.parse(raw));
   } catch { /* storage unavailable */ }
   return structuredClone(DEFAULTS);
+}
+/** Stored answers are rendered into HTML: keep only known keys with the default's type. */
+function sanitizeState(saved) {
+  const s = structuredClone(DEFAULTS);
+  if (!saved || typeof saved !== 'object') return s;
+  for (const [k, def] of Object.entries(DEFAULTS)) {
+    const v = saved[k];
+    if (typeof def === 'number') { if (v !== '' && Number.isFinite(+v)) s[k] = +v; }
+    else if (typeof def === 'boolean') { if (typeof v === 'boolean') s[k] = v; }
+    else if (typeof def === 'string') { if (typeof v === 'string') s[k] = v; }
+    else if (k === 'weaknesses') { if (Array.isArray(v)) s[k] = v.filter((w) => typeof w === 'string'); }
+    else if (k === 'days' && Array.isArray(v) && v.length === def.length) {
+      s.days = def.map((d, i) => ({
+        day: d.day,
+        on: typeof v[i]?.on === 'boolean' ? v[i].on : d.on,
+        minutes: Number.isFinite(+v[i]?.minutes) ? +v[i].minutes : d.minutes,
+        outdoor: typeof v[i]?.outdoor === 'boolean' ? v[i].outdoor : d.outdoor,
+      }));
+    }
+  }
+  return s;
 }
 function saveState() {
   try { localStorage.setItem('zwo-builder-answers', JSON.stringify(S)); } catch { /* ignore */ }
@@ -758,7 +779,8 @@ document.addEventListener('click', (e) => { const t = e.target.closest?.('.seg-c
 document.addEventListener('input', (e) => {
   const t = e.target;
   if (!t.dataset.num) return;
-  S[t.dataset.num] = t.type === 'range' ? +t.value : t.value;
+  // numbers only (an empty field stays '' so validation can flag it) — never raw input text
+  S[t.dataset.num] = t.value === '' ? '' : +t.value;
   const out = t.parentElement.querySelector('output');
   if (out) {
     const k = t.dataset.num;
