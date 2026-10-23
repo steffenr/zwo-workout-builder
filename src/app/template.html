@@ -175,7 +175,7 @@ code { font: 12px var(--mono); background: var(--surface-3); padding: 1px 6px; b
 
 /* ---------- buttons ---------- */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); border-radius: 10px; min-height: 44px; padding: 9px 16px; font: 600 15px var(--font); cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s, transform .05s; }
-.btn:active { transform: translateY(1px); }
+.btn:active { transform: translateY(1px) scale(.98); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .btn.ghost { background: transparent; }
@@ -495,7 +495,110 @@ dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(3px); }
 .foot a { color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; }
 @media (hover: hover) { .foot a:hover { color: var(--text); } }
 
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* ---------- micro animations ----------
+   zwoTrainer's motion vocabulary (mo-* keyframes, 120–500 ms, only on a change, nothing loops).
+   JS adds the classes only when something changed (motionOK() + restartAnim() in main.js);
+   with the system's "Reduce motion" setting every animation and transition is off. */
+.spinner { display: inline-block; width: 14px; height: 14px; border-radius: 50%; flex: none;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent); border-top-color: currentColor; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.seg-ctl button { transition: background .15s, color .15s, box-shadow .15s, outline-color .15s; }
+.zchip, .outtog, .day, .tabs button, .tabs button .n { transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s; }
+.choice:active, .opt:active { transform: scale(.99); }
+.wrow { transition: border-color .15s, transform .15s, box-shadow .15s; }
+@media (hover: hover) {
+  .wrow:not(.outdoor):hover { transform: translateY(-1px); box-shadow: 0 6px 16px -10px color-mix(in srgb, var(--text) 45%, transparent); }
+}
+.pbar.glide i { transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.pbar.glide u { transition: left .6s cubic-bezier(.2, .8, .2, 1); }
+.lbars.glide .fill { transition: height .5s cubic-bezier(.2, .8, .2, 1); }
+.lbars.glide .tgt, .lbars.glide .val { transition: bottom .5s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: no-preference) {
+  /* wizard: a new step slides in from the side it comes from, its cards settle one after another */
+  #stage.step-in > * { animation: mo-step .26s cubic-bezier(.2, .8, .2, 1) both; }
+  #stage.step-in.back > * { animation-name: mo-step-back; }
+  #stage.step-in > :nth-child(2) { animation-delay: 40ms; }
+  #stage.step-in > :nth-child(3) { animation-delay: 80ms; }
+  #stage.step-in > :nth-child(n+4) { animation-delay: 110ms; }
+  #stage.step-in > .step-actions { animation: mo-fade .2s both; }
+  #stage.step-in .choice, #stage.step-in .day { animation: mo-settle .26s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(90ms + var(--i, 0) * 22ms); }
+  #stage.step-in .art > * { transform-box: fill-box; transform-origin: 50% 100%; animation: mo-bar .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(180ms + var(--i, 0) * 30ms); }
+  #stage.step-in .zmix { animation: mo-wipe .5s cubic-bezier(.4, 0, .2, 1) both; animation-delay: calc(200ms + var(--i, 0) * 22ms); }
+  #stage.step-in .pbar i { animation: mo-wipe .6s .15s cubic-bezier(.4, 0, .2, 1) both; }
+  .tabs .n.just-done { animation: mo-check-pop .45s cubic-bezier(.2, .8, .2, 1.4) both; clip-path: inset(0 0 0 0); }
+  .tabs button.on .n.just-on { animation: mo-pip .35s cubic-bezier(.2, .8, .2, 1); }
+  /* a choice just made: ring pulse + check pop, chip dot pop, segment fade */
+  .choice.on.pick, .day.on.pick { animation: mo-ring .5s cubic-bezier(.2, .8, .2, 1); }
+  .choice.on.pick::after { animation: mo-check-pop .4s cubic-bezier(.2, .8, .2, 1.4) both; }
+  .day.on.pick .stepper, .day.on.pick .outtog { animation: mo-settle .24s .05s cubic-bezier(.2, .8, .2, 1) both; }
+  .zchip.pick i { animation: mo-dot-pop .45s cubic-bezier(.2, .8, .2, 1); }
+  .seg-ctl button.pick, .outtog.pick { animation: mo-seg .2s ease-out; }
+  .weekstrip span.pick { animation: mo-pip .35s cubic-bezier(.2, .8, .2, 1); }
+  /* changed values roll up or down; changed text fades */
+  .roll-up { display: inline-block; animation: mo-roll-up .2s cubic-bezier(.2, .8, .2, 1); }
+  .roll-down { display: inline-block; animation: mo-roll-down .2s cubic-bezier(.2, .8, .2, 1); }
+  .stats b.roll-up, .stats b.roll-down { display: block; }
+  .txt-in { animation: mo-fade .25s ease-out; }
+  .step-actions .why.why-in { animation: mo-view .2s ease-out; }
+  /* result: head rises, stats count up (JS), load bars grow, weeks settle in */
+  #result.res-in { --base: 220ms; }
+  #result.res-in > :nth-child(-n+4) { animation: mo-view .26s ease-out both; }
+  #result.res-in > :nth-child(2) { animation-delay: 50ms; }
+  #result.res-in > :nth-child(3) { animation-delay: 100ms; }
+  #result.res-in > :nth-child(4) { animation-delay: 140ms; }
+  #result.res-in > .wk-head { animation: mo-fade .3s var(--base) both; }
+  #result.res-in .lbar .fill { transform-origin: 50% 100%; animation: mo-bar .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(180ms + var(--i, 0) * 30ms); }
+  #result.res-in .lbar .tgt, #result.res-in .lbar .val { animation: mo-fade .3s both; animation-delay: calc(400ms + var(--i, 0) * 30ms); }
+  #result:is(.res-in, .res-shuffle) .wlist > .wrow { animation: mo-settle .24s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--base, 0ms) + var(--i, 0) * 22ms); }
+  #result:is(.res-in, .res-shuffle) .wprof .mini { animation: mo-wipe .45s cubic-bezier(.4, 0, .2, 1) both; animation-delay: calc(var(--base, 0ms) + 80ms + var(--i, 0) * 22ms); }
+  #result:is(.res-in, .res-shuffle) .opt { animation: mo-settle .3s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--base, 0ms) + var(--i, 0) * 60ms); }
+  #result:is(.res-in, .res-shuffle) .opt .mini { animation: mo-wipe .55s cubic-bezier(.4, 0, .2, 1) both; animation-delay: calc(var(--base, 0ms) + 120ms + var(--i, 0) * 60ms); }
+  #result.res-shuffle .plan-head h1 { animation: mo-settle .26s cubic-bezier(.2, .8, .2, 1) both; }
+  /* dialog: bottom sheet slides up on phones, scales in from 97 % from 600 px; closes in 120–160 ms */
+  dialog[open] { animation: mo-sheet-in .28s cubic-bezier(.2, .8, .2, 1); }
+  dialog.closing { animation: mo-sheet-out .16s ease-in forwards; }
+  dialog[open]::backdrop { animation: mo-fade .2s; }
+  dialog.closing::backdrop { animation: mo-fade-out .14s ease-in forwards; }
+  .pv-diagram.grow .seg-click { transform-box: fill-box; transform-origin: 50% 100%; animation: mo-bar .4s cubic-bezier(.2, .8, .2, 1) both; }
+  .zones-bar.grow { animation: mo-wipe .5s .2s cubic-bezier(.4, 0, .2, 1) both; }
+  #modal-body.swap .pv-head h2, #modal-body.swap .pv-stats b, #modal-body.swap .pv-desc { animation: mo-settle .26s cubic-bezier(.2, .8, .2, 1) both; }
+  .popover:not([hidden]) { animation: mo-pop-in .14s cubic-bezier(.2, .8, .2, 1); transform-origin: top right; }
+  .toast.in { animation: mo-toast-in .22s cubic-bezier(.2, .8, .2, 1); }
+  .toast.out { animation: mo-toast-out .18s ease-in forwards; }
+  .install-hint.in .hint-box { animation: mo-rise .35s .4s cubic-bezier(.2, .8, .2, 1) both; }
+  .install-hint.out .hint-box { animation: mo-sink .18s ease-in forwards; }
+}
+@media (prefers-reduced-motion: no-preference) and (min-width: 600px) {
+  dialog[open] { animation: mo-dlg-in .2s cubic-bezier(.2, .8, .2, 1); }
+  dialog.closing { animation: mo-dlg-out .12s ease-in forwards; }
+}
+@keyframes mo-step { from { opacity: 0; transform: translateX(14px); } }
+@keyframes mo-step-back { from { opacity: 0; transform: translateX(-14px); } }
+@keyframes mo-settle { from { opacity: 0; transform: translateY(6px) scale(.97); } }
+@keyframes mo-view { from { opacity: 0; transform: translateY(6px); } }
+@keyframes mo-rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes mo-sink { to { opacity: 0; transform: translateY(10px); } }
+@keyframes mo-bar { from { transform: scaleY(0); } }
+@keyframes mo-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes mo-fade { from { opacity: 0; } }
+@keyframes mo-fade-out { to { opacity: 0; } }
+@keyframes mo-seg { from { opacity: .4; transform: scale(.96); } }
+@keyframes mo-pip { 0% { transform: scale(.8); } 55% { transform: scale(1.1); } 100% { transform: none; } }
+@keyframes mo-ring { 0% { box-shadow: 0 0 0 1px var(--accent), 0 0 0 1px var(--accent-soft); } 40% { box-shadow: 0 0 0 1px var(--accent), 0 0 0 7px var(--accent-soft); } 100% { box-shadow: 0 0 0 1px var(--accent), 0 0 0 12px transparent; } }
+@keyframes mo-check-pop { 0% { transform: scale(.4); opacity: 0; clip-path: inset(0 100% 0 0); } 60% { opacity: 1; clip-path: inset(0 0 0 0); } 100% { transform: none; } }
+@keyframes mo-dot-pop { 0% { transform: scale(1); } 40% { transform: scale(1.9); box-shadow: 0 0 0 3px color-mix(in srgb, var(--zc) 35%, transparent); } 100% { transform: none; box-shadow: none; } }
+@keyframes mo-roll-up { from { opacity: 0; transform: translateY(60%); } }
+@keyframes mo-roll-down { from { opacity: 0; transform: translateY(-60%); } }
+@keyframes mo-dlg-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+@keyframes mo-dlg-out { to { opacity: 0; transform: scale(.98); } }
+@keyframes mo-sheet-in { from { transform: translateY(100%); } }
+@keyframes mo-sheet-out { to { transform: translateY(100%); } }
+@keyframes mo-pop-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+@keyframes mo-toast-in { from { opacity: 0; transform: translate(-50%, 14px); } }
+@keyframes mo-toast-out { to { opacity: 0; transform: translate(-50%, 10px); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+}
 </style>
 
 <header class="topbar"><div class="topbar-inner">

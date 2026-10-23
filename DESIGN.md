@@ -236,8 +236,28 @@ screen. Both activate only where the PWA assets are served next to the page — 
 - Validation: the primary button is disabled and the reason shows on the left of the action
   row ("Pick at least one day.").
 - Feedback: toasts for downloads and swaps; inline text for validation.
-- Motion: 150 ms for hover, border and opacity; 1 px lift on hover for cards; no bounces.
-  Everything is disabled under `prefers-reduced-motion`.
+- Motion: zwoTrainer's vocabulary (`mo-*` keyframes), 120–500 ms, only on a change, nothing
+  loops (except the Build spinner). Hover, border and opacity 150 ms; cards and workout rows
+  lift 1 px on hover; buttons press to 98 %. JS adds the classes only after a real change
+  (`motionOK()`, `restartAnim()`, `fx()` in main.js), so re-renders of the same step never
+  replay them.
+  - **Wizard:** a new step slides in from the side it comes from (`#stage.step-in`, `.back`),
+    its choice cards and day tiles settle one after another, the mode art and goal/style mix
+    bars grow in. A completed step's number pops its check (`.just-done`), the new one pips.
+  - **Choices:** the picked card or day tile pulses an accent ring and pops its check
+    (`.pick`); chip dots pop, segmented items fade. Day durations roll up or down, the volume
+    bar glides to the new total (`.pbar.glide`). Changed values in "Your answers" roll
+    (numbers, `.roll-up` / `.roll-down`) or fade (text, `.txt-in`); a new validation hint
+    rises in.
+  - **Result:** Build shows a spinner; the plan head rises, the stats count up from zero
+    (`countUp()`), the weekly load bars grow from the baseline, rows settle week by week and
+    their profiles wipe in (`#result.res-in`). Shuffle re-settles the rows, glides the load
+    bars and counts the stats from the old values (`.res-shuffle`).
+  - **Dialog:** a bottom sheet slides up on phones, the dialog scales in from 97 % from
+    600 px; the profile grows segment by segment, the zone bar wipes in; Swap re-settles the
+    title and stats (`.swap`). ✕, Esc and the backdrop close it with a 120–160 ms fade.
+  - Popover scales in, toasts slide up and out, the install hint rises in and sinks out.
+  - Everything is off under `prefers-reduced-motion` (a global CSS rule plus `motionOK()`).
 - Text: plain, friendly English in sentence case. Units with a space ("250 W", "90 %"),
   durations as `m:ss` / `h:mm:ss` (`fmtTime`) or "1h 05m" / "45 min" (`fmtDur`); day tiles
   use the short "1h30".

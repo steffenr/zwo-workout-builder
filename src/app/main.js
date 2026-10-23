@@ -181,9 +181,13 @@ let toastTimer;
 function toast(msg) {
   const t = $('#toast');
   t.textContent = msg;
-  t.hidden = false;
+  if (t.hidden || t.classList.contains('out')) { t.classList.remove('out'); t.hidden = false; if (motionOK()) restartAnim(t, 'in'); }
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
+  toastTimer = setTimeout(() => {
+    if (!motionOK()) { t.hidden = true; return; }
+    t.classList.add('out');
+    toastTimer = setTimeout(() => { t.hidden = true; t.classList.remove('in', 'out'); }, 180);
+  }, 3500);
 }
 
 // ---------------------------------------------------------------- helpers
@@ -269,6 +273,77 @@ function generate() {
 }
 
 
+// ---------------------------------------------------------------- motion
+// zwoTrainer's motion helpers: animate only on a change, never with "Reduce motion".
+const motionOK = () => !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+/** Restart a CSS animation class (removes the given classes first). */
+function restartAnim(el, cls, all = [cls]) {
+  if (!el) return;
+  el.classList.remove(...all);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+/** Count a number up (or down) to its final text once, ~0.8 s ease-out; the end text is exact. */
+function countUp(el, from, to, fmt, delay = 0) {
+  if (from === to) return;
+  const end = el.textContent;
+  el.textContent = fmt(from);
+  setTimeout(() => {
+    const t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / 800), e = 1 - (1 - k) ** 3;
+      el.textContent = k < 1 ? fmt(from + (to - from) * e) : end;
+      if (k < 1 && el.isConnected) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, delay);
+}
+/** Effects queued by an event handler, run once after the next render (the elements are new). */
+let pendingFx = [];
+const fx = (fn) => pendingFx.push(fn);
+function flushFx() {
+  const q = pendingFx;
+  pendingFx = [];
+  if (motionOK()) q.forEach((f) => f());
+}
+/** Mark the element(s) a choice was just made on. */
+const pickFx = (sel) => fx(() => document.querySelectorAll(sel).forEach((el) => restartAnim(el, 'pick')));
+const attrSel = (k, v) => `[${k}="${CSS.escape(String(v))}"]`;
+/** Changed readouts (`.stats` label + value) roll up / down (numbers) or fade (text). */
+function tickStats(root, memo, animate = true) {
+  if (!root) return;
+  for (const cell of root.querySelectorAll('.stats > div')) {
+    const k = cell.querySelector('.k')?.textContent, b = cell.querySelector('b');
+    if (!k || !b) continue;
+    const v = b.textContent, old = memo[k];
+    memo[k] = v;
+    if (!animate || old == null || old === v || !motionOK()) continue;
+    const a = parseFloat(old.replace(',', '.')), c = parseFloat(v.replace(',', '.'));
+    if (Number.isFinite(a) && Number.isFinite(c) && a !== c) restartAnim(b, c > a ? 'roll-up' : 'roll-down', ['roll-up', 'roll-down']);
+    else restartAnim(b, 'txt-in');
+  }
+}
+/** Glide inline sizes from their previous values (memo: key → value) with a CSS transition class. */
+function glide(host, cls, items, memo) {
+  const moves = [];
+  for (const [key, el, prop] of items) {
+    const to = el.style[prop], from = memo[key];
+    memo[key] = to;
+    if (from != null && from !== to) moves.push([el, prop, from, to]);
+  }
+  host.classList.remove(cls);
+  if (!moves.length || !motionOK()) return;
+  for (const [el, prop, from] of moves) el.style[prop] = from;
+  void host.offsetWidth;
+  host.classList.add(cls);
+  for (const [el, prop, , to] of moves) el.style[prop] = to;
+}
+const sideMemo = {}, insetMemo = {}, statMemo = {}, lbarMemo = {}, pbarMemo = {};
+let stripMemo = null;
+let lastStep = null;
+let lastWhy = '';
+let resultFx = null; // 'build' | 'shuffle': animate the next result render
+
 // ---------------------------------------------------------------- formatting
 const fmtTime = (sec) => {
   const s = Math.max(0, Math.round(sec));
@@ -335,10 +410,10 @@ function styleMix(k) {
 }
 function artPlan() {
   const h = [36, 42, 48, 24, 46, 52, 58, 28];
-  return `<svg class="art" viewBox="0 0 200 60" preserveAspectRatio="none" aria-hidden="true">${h.map((v, i) => `<rect x="${i * 25 + 2}" y="${60 - v}" width="20" height="${v}" rx="3" fill="var(--${i === 3 || i === 7 ? 'z3' : 'z2'})"/>`).join('')}</svg>`;
+  return `<svg class="art" viewBox="0 0 200 60" preserveAspectRatio="none" aria-hidden="true">${h.map((v, i) => `<rect style="--i:${i}" x="${i * 25 + 2}" y="${60 - v}" width="20" height="${v}" rx="3" fill="var(--${i === 3 || i === 7 ? 'z3' : 'z2'})"/>`).join('')}</svg>`;
 }
 function artSingle() {
-  return `<svg class="art" viewBox="0 0 200 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60L0 46L30 32L30 60Z" fill="var(--z1)"/>${[0, 1, 2, 3, 4].map((i) => `<rect x="${36 + i * 28}" y="14" width="16" height="46" fill="var(--z5)"/><rect x="${52 + i * 28}" y="42" width="12" height="18" fill="var(--z2)"/>`).join('')}<path d="M176 60L176 38L200 50L200 60Z" fill="var(--z1)"/></svg>`;
+  return `<svg class="art" viewBox="0 0 200 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 60L0 46L30 32L30 60Z" fill="var(--z1)"/>${[0, 1, 2, 3, 4].map((i) => `<rect style="--i:${i * 2 + 1}" x="${36 + i * 28}" y="14" width="16" height="46" fill="var(--z5)"/><rect style="--i:${i * 2 + 2}" x="${52 + i * 28}" y="42" width="12" height="18" fill="var(--z2)"/>`).join('')}<path style="--i:11" d="M176 60L176 38L200 50L200 60Z" fill="var(--z1)"/></svg>`;
 }
 
 // ---------------------------------------------------------------- steps
@@ -361,7 +436,7 @@ function stepActions() {
 
 function stepMode() {
   const card = (val, title, text, art) => `
-    <button type="button" class="choice ${S.mode === val ? 'on' : ''}" data-set="mode" data-val="${val}" aria-pressed="${S.mode === val}">
+    <button type="button" class="choice ${S.mode === val ? 'on' : ''}" style="--i:${val === 'plan' ? 0 : 1}" data-set="mode" data-val="${val}" aria-pressed="${S.mode === val}">
       ${art}<h3>${title}</h3><span class="sub">${text}</span></button>`;
   return `<div class="q"><div class="eyebrow">New</div><h1>What should we build?</h1></div>
     <div class="grid2">
@@ -391,7 +466,7 @@ function stepRider() {
 }
 
 function goalCards() {
-  return Object.entries(GOALS).map(([k, g]) => `<button type="button" class="choice ${S.goal === k ? 'on' : ''}" data-set="goal" data-val="${k}" aria-pressed="${S.goal === k}"><h3>${g.label}</h3><span class="sub">${GOAL_NOTES[k]}</span>${goalMix(k)}</button>`).join('');
+  return Object.entries(GOALS).map(([k, g], i) => `<button type="button" class="choice ${S.goal === k ? 'on' : ''}" style="--i:${i}" data-set="goal" data-val="${k}" aria-pressed="${S.goal === k}"><h3>${g.label}</h3><span class="sub">${GOAL_NOTES[k]}</span>${goalMix(k)}</button>`).join('');
 }
 
 function stepGoal() {
@@ -418,9 +493,9 @@ function stepGoal() {
 
 function stepWeek() {
   const tiles = S.days.map((d, i) => `
-    <div class="day ${d.on ? 'on' : ''}">
+    <div class="day ${d.on ? 'on' : ''}" style="--i:${i}">
       <button type="button" class="dtog" data-day-toggle="${i}" aria-pressed="${d.on}" aria-label="${DAY_NAMES[i]}: ${d.on ? 'riding, tap for rest' : 'rest, tap to ride'}"><b>${DAY_NAMES[i]}</b><small>${d.on ? (d.outdoor ? 'Outdoor' : 'Indoor') : 'Rest'}</small></button>
-      ${d.on ? `<div class="stepper"><output title="${fmtDur(+d.minutes)}">${fmtShort(+d.minutes)}</output><div class="steps"><button type="button" data-day-step="${i}" data-delta="-15" aria-label="${DAY_NAMES[i]} shorter"${+d.minutes <= 30 ? ' disabled' : ''}>−</button><button type="button" data-day-step="${i}" data-delta="15" aria-label="${DAY_NAMES[i]} longer"${+d.minutes >= 300 ? ' disabled' : ''}>+</button></div></div>
+      ${d.on ? `<div class="stepper"><output data-dur="${i}" title="${fmtDur(+d.minutes)}">${fmtShort(+d.minutes)}</output><div class="steps"><button type="button" data-day-step="${i}" data-delta="-15" aria-label="${DAY_NAMES[i]} shorter"${+d.minutes <= 30 ? ' disabled' : ''}>−</button><button type="button" data-day-step="${i}" data-delta="15" aria-label="${DAY_NAMES[i]} longer"${+d.minutes >= 300 ? ' disabled' : ''}>+</button></div></div>
       <button type="button" class="outtog" data-day-out="${i}" aria-pressed="${!!d.outdoor}" title="Outdoor rides count towards your load but get no file">Outdoor</button>` : ''}
     </div>`).join('');
   const on = S.days.filter((d) => d.on);
@@ -438,7 +513,7 @@ function stepWeek() {
 }
 
 function stepStyle() {
-  const styles = Object.entries(STYLES).map(([k, st]) => `<button type="button" class="choice ${S.style === k ? 'on' : ''}" data-set="style" data-val="${k}" aria-pressed="${S.style === k}"><h3>${st.label}</h3><span class="sub">${st.note || 'Picks the style that suits your goal and available time.'}</span>${styleMix(k)}</button>`).join('');
+  const styles = Object.entries(STYLES).map(([k, st], i) => `<button type="button" class="choice ${S.style === k ? 'on' : ''}" style="--i:${i}" data-set="style" data-val="${k}" aria-pressed="${S.style === k}"><h3>${st.label}</h3><span class="sub">${st.note || 'Picks the style that suits your goal and available time.'}</span>${styleMix(k)}</button>`).join('');
   return `<div class="q"><div class="eyebrow">Style</div><h1>How you like to train</h1></div>
     ${S.mode === 'plan' ? `<fieldset><legend class="k">Training style · easy / moderate / hard</legend><div class="grid2">${styles}</div></fieldset>` : ''}
     <div class="form">
@@ -476,7 +551,7 @@ function resultPlan() {
   const { plan } = result;
   const maxT = Math.max(...plan.weeks.map((w) => Math.max(w.tss, w.targetTss)));
   const bars = plan.weeks.map((w) => `
-    <div class="lbar ${w.kind}" title="Week ${w.week}: ${w.tss} TSS (target ${w.targetTss}), ${w.hours} h, ${phaseLabel(w)}">
+    <div class="lbar ${w.kind}" style="--i:${Math.min(w.week - 1, 24)}" title="Week ${w.week}: ${w.tss} TSS (target ${w.targetTss}), ${w.hours} h, ${phaseLabel(w)}">
       <div class="tgt" style="bottom:${(w.targetTss / maxT) * 100}%"></div>
       <div class="fill" style="height:${(w.tss / maxT) * 100}%"></div>
       <span class="val" style="bottom:${(Math.max(w.tss, w.targetTss) / maxT) * 100}%">${w.tss}</span>
@@ -486,11 +561,11 @@ function resultPlan() {
     const rows = wk.sessions.map((s, si) => {
       const day = `<span class="wd">${DAY_NAMES[s.day - 1]}</span>`;
       if (s.outdoor) {
-        return `<div class="wrow outdoor">${day}<div class="wt"><span>Outdoor ride</span><small>No file · counts towards your load</small></div><div class="wprof"></div><div class="wdur">${fmtDur(s.minutes)}</div><div class="wtss">≈ ${s.estTss}<small> TSS</small></div></div>`;
+        return `<div class="wrow outdoor" style="--i:${Math.min(si, 8)}">${day}<div class="wt"><span>Outdoor ride</span><small>No file · counts towards your load</small></div><div class="wprof"></div><div class="wdur">${fmtDur(s.minutes)}</div><div class="wtss">≈ ${s.estTss}<small> TSS</small></div></div>`;
       }
       const w = s.workout;
       const open = modalState?.kind === 'plan' && modalState.wi === wi && modalState.si === si;
-      return `<div class="wrow ${open ? 'open' : ''}" role="button" tabindex="0" data-open="plan:${wi},${si}" aria-label="${esc(w.name)}, ${DAY_NAMES[s.day - 1]}">
+      return `<div class="wrow ${open ? 'open' : ''}" style="--i:${Math.min(si, 8)}" role="button" tabindex="0" data-open="plan:${wi},${si}" aria-label="${esc(w.name)}, ${DAY_NAMES[s.day - 1]}">
         ${day}
         <div class="wt"><span>${esc(w.name)}</span><small>${CATEGORY_INFO[w.category].label} · ${ROLE_LABEL[s.role] || s.role}</small></div>
         <div class="wprof">${profileSVG(w.profile)}</div>
@@ -509,11 +584,11 @@ function resultPlan() {
       <div class="actions"><button type="button" class="btn ghost" data-act="edit">Change answers</button><button type="button" class="btn" data-act="shuffle">Shuffle workouts</button><button type="button" class="btn primary" data-act="dl-plan">${DL_ICON}Download plan (.zip)</button></div>
     </div>
     <div class="card section stats plan">
-      <div><span class="k">Weeks</span><b>${plan.weeks.length}</b></div>
-      <div><span class="k">Workouts</span><b>${plan.totals.workouts}</b></div>
-      <div><span class="k">Hours</span><b>${plan.totals.hours}</b></div>
-      <div><span class="k">Total TSS</span><b>${plan.totals.tss.toLocaleString()}</b></div>
-      <div><span class="k">TSS / week</span><b>${Math.round(plan.totals.tss / plan.weeks.length)}</b></div>
+      <div><span class="k">Weeks</span><b data-count="${plan.weeks.length}">${plan.weeks.length}</b></div>
+      <div><span class="k">Workouts</span><b data-count="${plan.totals.workouts}">${plan.totals.workouts}</b></div>
+      <div><span class="k">Hours</span><b data-count="${plan.totals.hours}">${plan.totals.hours}</b></div>
+      <div><span class="k">Total TSS</span><b data-count="${plan.totals.tss}">${plan.totals.tss.toLocaleString()}</b></div>
+      <div><span class="k">TSS / week</span><b data-count="${Math.round(plan.totals.tss / plan.weeks.length)}">${Math.round(plan.totals.tss / plan.weeks.length)}</b></div>
     </div>
     <div class="card load" style="margin-top:12px" aria-label="Weekly load">
       <div class="wk-head"><span class="eyebrow">Weekly load (TSS)</span>
@@ -533,7 +608,7 @@ function resultSingle() {
       <div class="actions"><button type="button" class="btn ghost" data-act="edit">Change answers</button><button type="button" class="btn" data-act="shuffle">More options</button><button type="button" class="btn primary" data-act="dl-all">${DL_ICON}Download all (.zip)</button></div>
     </div>
     <div class="opts section">${options.map((w, i) => `
-      <article class="card opt" role="button" tabindex="0" data-open="single:${i}" aria-label="Option ${i + 1}: ${esc(w.name)}">
+      <article class="card opt" style="--i:${i}" role="button" tabindex="0" data-open="single:${i}" aria-label="Option ${i + 1}: ${esc(w.name)}">
         <div class="eyebrow">Option ${i + 1} ${zoneTag(w.category)}</div>
         <h3>${esc(w.name)}</h3>
         ${profileSVG(w.profile, { h: 64 })}
@@ -571,9 +646,11 @@ function segInfo(w, key) {
   return `<b>Steady</b> · ${fmtTime(seg.dur)} · <b ${ink}>${Math.round(seg.p0 * ftp)} W</b> (${Math.round(seg.p0 * 100)} %) · ${ZONES.find((x) => x.id === z).name}${cad}`;
 }
 
-function renderModal() {
+let modalCloseTimer = null;
+function renderModal({ swap = false } = {}) {
   const m = modalWorkout();
   const dlg = $('#modal');
+  if (modalCloseTimer) { clearTimeout(modalCloseTimer); modalCloseTimer = null; dlg.classList.remove('closing'); } // reopened while closing
   if (!m) { if (dlg.open) dlg.close(); return; }
   const { w, key, eyebrow } = m;
   const ftp = result.input.ftp;
@@ -605,6 +682,16 @@ function renderModal() {
       <button type="button" class="btn" data-act="${isPlan ? 'dl-ictx' : 'dl-ictx-opt'}" data-i="${modalState.i ?? ''}">${ictxLabel()}</button>
       <button type="button" class="btn primary" data-act="${isPlan ? 'dl-one' : 'dl-opt'}" data-i="${modalState.i ?? ''}">${DL_ICON}${zwoLabel()}</button>
     </div>`;
+  const body = $('#modal-body');
+  body.classList.remove('swap');
+  if (motionOK()) {
+    // the profile grows from the baseline, segment by segment; the zone bar wipes in
+    const diag = $('.pv-diagram', body);
+    diag.querySelectorAll('.seg-click').forEach((p, i) => { p.style.animationDelay = `${80 + Math.min(i, 30) * 12}ms`; });
+    restartAnim(diag, 'grow');
+    restartAnim($('.zones-bar', body), 'grow');
+    if (swap) restartAnim(body, 'swap');
+  }
   if (!dlg.open) dlg.showModal();
 }
 
@@ -616,28 +703,64 @@ function openModal(spec) {
   renderResult();
 }
 function closeModal() {
+  const dlg = $('#modal');
   modalState = null;
   selSeg = null;
-  if ($('#modal').open) $('#modal').close();
   renderResult();
+  if (!dlg.open || modalCloseTimer) return;
+  if (!motionOK()) { dlg.close(); return; }
+  dlg.classList.add('closing');
+  modalCloseTimer = setTimeout(() => { modalCloseTimer = null; dlg.classList.remove('closing'); dlg.close(); }, 150);
 }
 
 // ---------------------------------------------------------------- render
 function renderResult() {
   if (steps()[step] !== 'Result' || !result) return;
-  $('#result').innerHTML = result.kind === 'plan' ? resultPlan() : resultSingle();
+  const el = $('#result');
+  const anim = motionOK() ? resultFx : null;
+  resultFx = null;
+  el.classList.remove('res-in', 'res-shuffle');
+  el.innerHTML = result.kind === 'plan' ? resultPlan() : resultSingle();
+  if (anim) restartAnim(el, anim === 'build' ? 'res-in' : 'res-shuffle');
+  // plan stats count up once: from zero on a new build, from the old value on a shuffle
+  for (const b of el.querySelectorAll('b[data-count]')) {
+    const k = b.parentElement.querySelector('.k').textContent, to = +b.dataset.count;
+    const from = anim === 'build' ? 0 : statMemo[k];
+    statMemo[k] = to;
+    if (!anim || from == null || from === to) continue;
+    const dec = (String(to).split('.')[1] || '').length;
+    countUp(b, from, to, (v) => (dec ? v.toFixed(dec) : Math.round(v).toLocaleString()), anim === 'build' ? 200 : 0);
+  }
+  // weekly load bars glide to new heights after a shuffle (a new build grows them in CSS)
+  const lbars = $('.lbars', el);
+  if (lbars) {
+    const items = [];
+    lbars.querySelectorAll('.lbar').forEach((b, i) => {
+      items.push([`f${i}`, $('.fill', b), 'height'], [`t${i}`, $('.tgt', b), 'bottom'], [`v${i}`, $('.val', b), 'bottom']);
+    });
+    if (anim === 'shuffle') glide(lbars, 'glide', items, lbarMemo);
+    else for (const [k, node, prop] of items) lbarMemo[k] = node.style[prop];
+  }
 }
 
 function render() {
   const names = steps();
   const isResult = names[step] === 'Result';
+  const prevStep = lastStep;
+  const stepChanged = prevStep !== null && prevStep !== step;
+  lastStep = step;
   $('#steps').innerHTML = names.map((n, i) => {
     const cls = i === step ? 'on' : i < step || (result && i <= names.length - 1) ? 'done' : '';
     return `<button type="button" class="${cls}" data-goto="${i}" ${i > step && !result ? 'disabled' : ''} aria-current="${i === step ? 'step' : 'false'}"><span class="n">${i < step ? '✓' : i + 1}</span><span class="lbl">${n}</span></button>`;
   }).join('');
   $('#wizard').hidden = isResult;
   $('#result').hidden = !isResult;
-  if (isResult) { renderResult(); return; }
+  if (stepChanged && motionOK()) {
+    // steps just completed pop their check; the new current number pips
+    for (let i = prevStep; i < step; i++) restartAnim($(`#steps button:nth-child(${i + 1}) .n`), 'just-done');
+    restartAnim($(`#steps button:nth-child(${step + 1}) .n`), 'just-on');
+  }
+  if (isResult) { renderResult(); flushFx(); return; }
   const n = names[step];
   let body;
   if (n === 'Mode') body = stepMode();
@@ -645,18 +768,48 @@ function render() {
   else if (n === 'Goal' || n === 'Workout') body = stepGoal();
   else if (n === 'Week') body = stepWeek();
   else body = stepStyle();
-  $('#stage').innerHTML = body + stepActions();
-  $('#side').innerHTML = sideHTML();
+  const stage = $('#stage');
+  stage.classList.remove('step-in', 'back');
+  stage.innerHTML = body + stepActions();
+  if (stepChanged && motionOK()) { if (step < prevStep) stage.classList.add('back'); restartAnim(stage, 'step-in'); }
+  const why = $('.step-actions .why', stage);
+  if (why && why.textContent && why.textContent !== lastWhy && !stepChanged && motionOK()) restartAnim(why, 'why-in');
+  lastWhy = why?.textContent || '';
+  tickStats(stage, insetMemo, !stepChanged);
+  renderSide();
+  // volume bar: grows in with the step, then glides to each new total
+  const pbar = $('.load .pbar', stage);
+  if (pbar) {
+    const items = [['i', $('i', pbar), 'width'], ['u', $('u', pbar), 'left']];
+    if (stepChanged) for (const [k, node, prop] of items) pbarMemo[k] = node.style[prop]; // the step-in wipe grows it
+    else glide(pbar, 'glide', items, pbarMemo);
+  }
+  flushFx();
+}
+
+/** "Your answers": changed values roll, changed riding days pip. */
+function renderSide() {
+  const side = $('#side');
+  side.innerHTML = sideHTML();
+  tickStats(side, sideMemo);
+  const strip = [...side.querySelectorAll('.weekstrip span')];
+  const now = strip.map((x) => x.className);
+  if (stripMemo && motionOK()) strip.forEach((x, i) => { if (stripMemo[i] !== now[i]) restartAnim(x, 'pick'); });
+  if (strip.length) stripMemo = now;
 }
 
 /** Refresh only the summary and the Next button (while typing or dragging). */
 function refreshLight() {
-  $('#side').innerHTML = sideHTML();
+  renderSide();
   const invalid = validate();
   const next = $('[data-act="next"]');
   if (next) next.disabled = !!invalid;
   const why = $('.step-actions .why');
-  if (why) why.textContent = invalid;
+  if (why) {
+    why.textContent = invalid;
+    if (invalid && invalid !== lastWhy && motionOK()) restartAnim(why, 'why-in');
+    lastWhy = invalid;
+  }
 }
 
 function validate() {
@@ -680,8 +833,8 @@ function goNext() {
   const names = steps();
   if (names[step + 1] === 'Result') {
     const btn = $('[data-act="next"]');
-    if (btn) { btn.textContent = 'Building…'; btn.disabled = true; }
-    setTimeout(() => { seedSalt = 0; dataReady.then(() => { generate(); step++; render(); window.scrollTo({ top: 0 }); }); }, 20);
+    if (btn) { btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Building…'; btn.disabled = true; }
+    setTimeout(() => { seedSalt = 0; dataReady.then(() => { generate(); resultFx = 'build'; step++; render(); window.scrollTo({ top: 0 }); }); }, 20);
     return;
   }
   step++; render(); window.scrollTo({ top: 0 });
@@ -701,24 +854,35 @@ document.addEventListener('click', (e) => {
     try { localStorage.setItem('zwo-builder-theme', theme); } catch { /* ignore */ }
     applyTheme();
     $('#theme-ctl').querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.themeSet === theme); b.setAttribute('aria-pressed', b.dataset.themeSet === theme); });
+    if (motionOK()) restartAnim(t, 'pick');
     return;
   }
-  if (t.dataset.dayToggle != null) { const d = S.days[+t.dataset.dayToggle]; d.on = !d.on; saveState(); render(); return; }
-  if (t.dataset.dayStep != null) {
-    const d = S.days[+t.dataset.dayStep];
-    d.minutes = Math.max(30, Math.min(300, +d.minutes + +t.dataset.delta)); saveState(); render(); return;
+  if (t.dataset.dayToggle != null) {
+    const i = +t.dataset.dayToggle, d = S.days[i];
+    d.on = !d.on;
+    if (d.on) pickFx(`.day:has(${attrSel('data-day-toggle', i)})`);
+    saveState(); render(); return;
   }
-  if (t.dataset.dayOut != null) { const d = S.days[+t.dataset.dayOut]; d.outdoor = !d.outdoor; saveState(); render(); return; }
+  if (t.dataset.dayStep != null) {
+    const i = +t.dataset.dayStep, d = S.days[i], before = +d.minutes;
+    d.minutes = Math.max(30, Math.min(300, +d.minutes + +t.dataset.delta));
+    if (+d.minutes !== before) fx(() => restartAnim($(attrSel('data-dur', i)), d.minutes > before ? 'roll-up' : 'roll-down', ['roll-up', 'roll-down']));
+    saveState(); render(); return;
+  }
+  if (t.dataset.dayOut != null) { const d = S.days[+t.dataset.dayOut]; d.outdoor = !d.outdoor; pickFx(attrSel('data-day-out', t.dataset.dayOut)); saveState(); render(); return; }
   if (t.dataset.set) {
     const v = t.dataset.val;
+    const changed = String(S[t.dataset.set]) !== String(v);
     S[t.dataset.set] = t.dataset.set === 'years' ? +v : v;
     if (t.dataset.set === 'mode') result = null;
+    if (changed) pickFx(`${attrSel('data-set', t.dataset.set)}${attrSel('data-val', v)}`);
     saveState(); render(); return;
   }
   if (t.dataset.toggle) {
     const arr = S[t.dataset.toggle];
     const i = arr.indexOf(t.dataset.val);
     if (i >= 0) arr.splice(i, 1); else arr.push(t.dataset.val);
+    pickFx(`${attrSel('data-toggle', t.dataset.toggle)}${attrSel('data-val', t.dataset.val)}`);
     saveState(); render(); return;
   }
   if (t.dataset.goto) {
@@ -732,7 +896,7 @@ document.addEventListener('click', (e) => {
     case 'back': if (step > 0) { step--; render(); window.scrollTo({ top: 0 }); } break;
     case 'close': closeModal(); break;
     case 'edit': step = steps().length - 2; render(); window.scrollTo({ top: 0 }); break;
-    case 'shuffle': seedSalt++; generate(); render(); toast(S.mode === 'plan' ? 'New workouts, same structure.' : 'Three new options.'); break;
+    case 'shuffle': seedSalt++; generate(); resultFx = 'shuffle'; render(); toast(S.mode === 'plan' ? 'New workouts, same structure.' : 'Three new options.'); break;
     case 'dl-plan': downloadPlan(result.plan); break;
     case 'dl-all': downloadOptions(result.options); break;
     case 'dl-opt': downloadWorkout(result.options[+t.dataset.i]); break;
@@ -743,7 +907,7 @@ document.addEventListener('click', (e) => {
       rerolls++;
       const w = rerollSession(result.plan, modalState.wi, modalState.si, ctx, result.input, rerolls);
       selSeg = null;
-      renderModal();
+      renderModal({ swap: true });
       renderResult();
       if (w) toast(`Swapped for ${w.name}`);
       break;
@@ -759,6 +923,7 @@ document.addEventListener('keydown', (e) => {
 });
 $('#modal').addEventListener('close', () => { if (modalState) { modalState = null; selSeg = null; renderResult(); } });
 $('#modal').addEventListener('click', (e) => { if (e.target === $('#modal')) closeModal(); });
+$('#modal').addEventListener('cancel', (e) => { e.preventDefault(); closeModal(); }); // Esc: same fade-out as ✕
 
 // segment hover / tap in the dialog: update the outline and the info line only
 function pickSegment(t) {
@@ -825,7 +990,10 @@ const hintEl = () => $('#install-hint');
 function hintDismiss() {
   dismissedInstall = true;
   try { localStorage.setItem('zwo-builder-install-dismissed', '1'); } catch { /* ignore */ }
-  hintEl().hidden = true;
+  const el = hintEl();
+  if (el.hidden || !motionOK()) { el.hidden = true; return; }
+  restartAnim(el, 'out', ['in', 'out']);
+  setTimeout(() => { el.hidden = true; el.classList.remove('out'); }, 180);
 }
 /** Platform-specific steps shown when the browser offers no one-click prompt. */
 function hintSteps() {
@@ -839,7 +1007,9 @@ function hintSteps() {
 }
 function renderHint() {
   const el = hintEl();
+  const wasHidden = el.hidden;
   el.hidden = !(pwaReady() && !isStandalone && !dismissedInstall && (deferredPrompt || pwaAssetsKnown));
+  if (wasHidden && !el.hidden && motionOK()) restartAnim(el, 'in', ['in', 'out']);
   // With a one-click prompt the button replaces the manual steps; without it
   // the button is hidden and the steps are shown instead.
   const btn = el.querySelector('[data-hint-action="install"]');
