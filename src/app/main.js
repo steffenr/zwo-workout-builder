@@ -355,31 +355,45 @@ const fmtTime = (sec) => {
 const fmtShort = (min) => (min >= 60 ? `${Math.floor(min / 60)}h${min % 60 ? String(min % 60).padStart(2, '0') : ''}` : `${min}m`);
 const fmtDur = (min) => (min >= 60 ? `${Math.floor(min / 60)}h ${String(Math.round(min % 60)).padStart(2, '0')}m` : `${Math.round(min)} min`);
 
-// ---------------------------------------------------------------- theme (lives in Settings)
-const THEME_LABEL = { system: 'Match system', light: 'Light', dark: 'Dark' };
-let theme = 'system';
-try { theme = localStorage.getItem('zwo-builder-theme') || 'system'; } catch { /* ignore */ }
+// ---------------------------------------------------------------- theme
+// Same switch as the zwoTrainer website: follows the system until clicked, then remembers light / dark.
+const THEME_KEY = 'zwo-builder-theme';
+const THEME_COLOR = { light: '#00a3c4', dark: '#1cc4e6' };
+const ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+const darkQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+let theme = null; // 'light' | 'dark' | null (= system); an old 'system' value counts as null
+try { const t = localStorage.getItem(THEME_KEY); if (t === 'light' || t === 'dark') theme = t; } catch { /* ignore */ }
+const isDark = () => (theme ? theme === 'dark' : !!darkQuery?.matches);
 function applyTheme() {
-  if (theme === 'system') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = theme;
+  const root = document.documentElement;
+  if (theme) root.dataset.theme = theme;
+  else delete root.dataset.theme;
+  // the browser bar colour follows a picked theme too (the media queries only know the system)
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+    m.content = THEME_COLOR[theme || (m.media.includes('dark') ? 'dark' : 'light')];
+  });
+  const b = $('#btn-theme');
+  if (!b) return;
+  const label = isDark() ? 'Switch to light mode' : 'Switch to dark mode';
+  b.innerHTML = isDark() ? ICON_SUN : ICON_MOON;
+  b.setAttribute('aria-label', label);
+  b.title = label;
 }
-
-function openSettings(anchor) {
-  const pop = $('#popover');
-  if (!pop.hidden) { closePopover(); return; }
-  pop.innerHTML = `<div class="pop-title">Appearance</div>
-    <div class="pop-row"><span class="seg-ctl" id="theme-ctl">${['system', 'light', 'dark'].map((t) => `<button type="button" data-theme-set="${t}" class="${theme === t ? 'on' : ''}" aria-pressed="${theme === t}">${THEME_LABEL[t]}</button>`).join('')}</span></div>
-    <hr><p>Your answers and the theme are stored in this browser only.</p>`;
-  pop.hidden = false;
-  const r = anchor.getBoundingClientRect();
-  pop.style.top = `${r.bottom + 8}px`;
-  pop.style.left = `${Math.max(16, Math.min(r.right, window.innerWidth - 16) - pop.offsetWidth)}px`;
-  anchor.setAttribute('aria-expanded', 'true');
+let themeFadeT;
+function toggleTheme(btn) {
+  theme = isDark() ? 'light' : 'dark';
+  const root = document.documentElement;
+  if (motionOK()) {
+    root.classList.add('theme-anim');
+    clearTimeout(themeFadeT);
+    themeFadeT = setTimeout(() => root.classList.remove('theme-anim'), 320);
+  }
+  try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
+  applyTheme();
+  if (motionOK()) restartAnim(btn, 'swap');
 }
-function closePopover() {
-  $('#popover').hidden = true;
-  $('#btn-settings').setAttribute('aria-expanded', 'false');
-}
+darkQuery?.addEventListener?.('change', () => { if (!theme) applyTheme(); });
 
 // ---------------------------------------------------------------- small visuals
 const GOAL_NOTES = {
@@ -842,21 +856,11 @@ function goNext() {
 
 // ---------------------------------------------------------------- events
 document.addEventListener('click', (e) => {
-  const pop = $('#popover');
-  if (!pop.hidden && !e.target.closest('#popover') && !e.target.closest('#btn-settings')) closePopover();
   const opener = e.target.closest('[data-open]');
   if (opener && !e.target.closest('button')) { openModal(opener.dataset.open); return; }
   const t = e.target.closest('button');
   if (!t) return;
-  if (t.id === 'btn-settings') { openSettings(t); return; }
-  if (t.dataset.themeSet) {
-    theme = t.dataset.themeSet;
-    try { localStorage.setItem('zwo-builder-theme', theme); } catch { /* ignore */ }
-    applyTheme();
-    $('#theme-ctl').querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.themeSet === theme); b.setAttribute('aria-pressed', b.dataset.themeSet === theme); });
-    if (motionOK()) restartAnim(t, 'pick');
-    return;
-  }
+  if (t.id === 'btn-theme') { toggleTheme(t); return; }
   if (t.dataset.dayToggle != null) {
     const i = +t.dataset.dayToggle, d = S.days[i];
     d.on = !d.on;
@@ -919,7 +923,6 @@ document.addEventListener('click', (e) => {
 // rows and option cards open with Enter / Space
 document.addEventListener('keydown', (e) => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-open]')) { e.preventDefault(); openModal(e.target.dataset.open); }
-  if (e.key === 'Escape' && !$('#popover').hidden) closePopover();
 });
 $('#modal').addEventListener('close', () => { if (modalState) { modalState = null; selSeg = null; renderResult(); } });
 $('#modal').addEventListener('click', (e) => { if (e.target === $('#modal')) closeModal(); });

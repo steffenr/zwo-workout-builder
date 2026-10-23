@@ -69,7 +69,8 @@ of the screen and workout details open as a bottom sheet; tablets and desktops g
 layouts with the summary sidebar.
 
 Clicking the logo returns to the mode selection; answers and the last result are kept.
-The colour theme (Match system / Light / Dark) is in Settings (gear icon, top right); the
+The sun / moon button (top right) switches between light and dark mode (it follows your
+system until you click it); the
 cup icon (and the footer link) goes to Buy Me a Coffee, the last icon opens this repository
 on GitHub.
 Answers and the theme are stored in the browser's local storage only.

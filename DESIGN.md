@@ -27,7 +27,7 @@ token or a shared component, mirror the change here. A new pattern is documented
 ### Theme tokens
 
 Always use tokens (`var(--…)`), never raw hex in components. Dark values apply via
-`prefers-color-scheme` unless the user picked a theme in Settings
+`prefers-color-scheme` unless the user picked a theme with the top-bar switch
 (`:root[data-theme="light|dark"]`).
 
 | Token | Light | Dark | Use |
@@ -103,10 +103,10 @@ Headings use `letter-spacing: -0.01em`. Numbers in columns always use tabular fi
 | Spacing | 4 · 6 · 8 · 10 · 12 · 14 · 16 · 20 · 24 · 32 px |
 | Page | `.view` max-width 1120 px, padding 16 px on phones, 24 px from 760 px (safe-area aware) |
 | Sections | `.section` margin-top 32 px; week headers 26 px above their list |
-| Radius | dialog 18 px · cards 14 px (`--radius`) · popover 12 px · day tiles 12 px · buttons and inputs 10 px · rows 11 px · small buttons 8 px · tags 5–6 px · pills 99 px · round buttons 50 % |
-| Elevation | `--shadow` subtle on cards (none in dark) · `--shadow-lg` for dialog, popover, toast · dark mode relies on borders |
+| Radius | dialog 18 px · cards 14 px (`--radius`) · day tiles 12 px · buttons and inputs 10 px · rows 11 px · small buttons 8 px · tags 5–6 px · pills 99 px · round buttons 50 % |
+| Elevation | `--shadow` subtle on cards (none in dark) · `--shadow-lg` for dialog and toast · dark mode relies on borders |
 
-Z-index: top bar 5 · install hint 90 · toast 100 · popover 200 (the dialog uses the browser's top layer).
+Z-index: top bar 5 · install hint 90 · toast 100 (the dialog uses the browser's top layer).
 
 ## Layout
 
@@ -120,7 +120,7 @@ Z-index: top bar 5 · install hint 90 · toast 100 · popover 200 (the dialog us
   step tabs:  (✓) Mode  (✓) Rider  (3) Goal  (4) Week  (5) Style  (6) Result
   wizard:     [ step card ··························· ] [ Your answers ]
   or result:  plan head · stats · weekly load · week lists
-<dialog id="modal"> workout details · #popover settings · #toast
+<dialog id="modal"> workout details · #toast
 ```
 
 - **Top bar:** mirrors the header of the zwoTrainer website (`../zwoTrainer/site/site.css`,
@@ -130,9 +130,12 @@ Z-index: top bar 5 · install hint 90 · toast 100 · popover 200 (the dialog us
   (`.nav-links`): text link zwoTrainer (website; 15 px / 500, `--text-2`, `--surface-2` on
   hover, radius 10; from 760 px), then GitHub (`#link-github`, GitHub mark) and Buy me a coffee
   (`#link-coffee`, cup) as icon-only links (`a.ico`, 38 × 38, 18 px icon, label in
-  `title` + `aria-label`), then Settings (`.nav-btn`, gear) as the last item. External links
+  `title` + `aria-label`), then the theme switch (`#btn-theme`, `.nav-btn.theme-btn`) as the last item. External links
   open in a new tab. On phones the bar is 56 px, the brand 18 px with a 26 px icon, the
-  icon links 40 × 40 and the zwoTrainer link is hidden. Nothing else; new options go in Settings.
+  icon links 40 × 40 and the zwoTrainer link is hidden. Nothing else. The theme switch is the zwoTrainer website's: it follows the system until
+  clicked, then toggles light / dark (stored as `zwo-builder-theme`); it shows a sun in dark
+  mode and a moon in light mode, colours cross-fade for 0.25 s (`html.theme-anim`) and the icon
+  turns in (`.swap`, `mo-turn`). The `theme-color` metas follow a picked theme.
 - **Step tabs** (`.tabs`): numbered steps; current = accent underline and filled number,
   done = check in soft accent, future = disabled until a result exists. Below 760 px only the
   current step shows its label.
@@ -176,8 +179,8 @@ Hover effects only apply under `(hover: hover)`.
 |---|---|
 | **Button** `.btn` | 1 px `--line-strong` border, `--surface`, 600 14 px, radius 10, padding 9 × 16. `.primary` (accent fill), `.ghost` (transparent), `.sm` (13 px, radius 8), `.round` (circle). One primary per view or dialog, placed last. Download buttons carry the download icon. |
 | **Icon button** `.icon-btn` | 36 × 36, transparent, muted icon, `--surface-2` on hover; `title` + `aria-label`. External links get `target="_blank" rel="noopener noreferrer"` and say "(opens in a new tab)" in the label. |
-| **Top-bar button** `.nav-btn` | 38 × 38, 1 px `--line-strong` border, radius 10, 18 px icon in `--text-2`; `--surface-2` on hover or while open. Same as the website's theme button. Only used for Settings. |
-| **Segmented control** `.seg-ctl` | `--surface-2` track, radius 10, 3 px padding; selected item is a raised `--surface` pill. Used for experience, plan length and the theme. |
+| **Top-bar button** `.nav-btn` | 38 × 38, 1 px `--line-strong` border, radius 10, 18 px icon in `--text-2`; `--surface-2` on hover. Same as the website's theme button. Only used for the theme switch. |
+| **Segmented control** `.seg-ctl` | `--surface-2` track, radius 10, 3 px padding; selected item is a raised `--surface` pill. Used for experience and plan length. |
 | **Card** `.card` | `--surface`, 1 px `--line`, radius 14, padding 20, `--shadow`. |
 | **Tabs** `.tabs` | 14 px 600 muted, accent 2 px underline on the current item. Used for the wizard steps. |
 | **Workout row** `.wrow` | grid: day badge (`.wd`) · title + meta · mini profile 200 × 28 · duration · zone tag + TSS. Radius 11, hover border `--line-strong`; the open workout gets the accent border and soft gradient. Outdoor rides are a non-clickable row on `--surface-2`. Rows are focusable; Enter or Space opens. |
@@ -189,7 +192,6 @@ Hover effects only apply under `(hover: hover)`.
 | **Profile** `.pv-diagram` | `--surface-2` box, radius 12, watt axis as HTML ticks on the left (never SVG text), dashed `--ftp` line, bars stretch (`preserveAspectRatio="none"`). |
 | **Segment info** `.seg-info` | one 13.5 px line: kind · duration · target watts in zone ink (+ % FTP, zone, rpm). Updates on hover/tap; the selected bar gets an accent outline. |
 | **Zones bar / legend** | 10 px bar with 2 px gaps; legend with 9 px squares, zone name and minutes. |
-| **Popover** `.popover` | radius 12, `--shadow-lg`, 6 px padding, 260 px minimum; `.pop-title` uppercase 11 px. Settings: Appearance (Match system / Light / Dark). Closes on outside click and Esc. |
 | **Inputs** | `--surface`, 1 px `--line-strong`, radius 10, padding 8 × 12, 14 px; focus = accent border + 3 px `--accent-soft` ring. Number inputs right-aligned in `--num`. Checkboxes and ranges use `accent-color`. |
 | **Footer** `.foot` | 12.5 px muted note under the page; links in `--text-2`, underlined, `--text` on hover ("Buy me a coffee"). |
 | **Toast** `.toast` | inverted, radius 12, bottom centre, 3.5 s, short plain English. |
@@ -212,7 +214,7 @@ Hover effects only apply under `(hover: hover)`.
 ## Icons
 
 Inline SVG, 24 × 24 viewBox, `stroke="currentColor"`, `stroke-width="2"`, round caps and
-joins (Lucide-like); the gear is zwoTrainer's filled glyph. 20 px in the top bar, 16 px in
+joins (Lucide-like); the theme switch uses zwoTrainer's sun and moon. 20 px in the top bar, 16 px in
 buttons.
 
 The app icon is `src/app/icon.svg` (black rounded tile with rising bars in the zone fills).
@@ -256,7 +258,7 @@ screen. Both activate only where the PWA assets are served next to the page — 
   - **Dialog:** a bottom sheet slides up on phones, the dialog scales in from 97 % from
     600 px; the profile grows segment by segment, the zone bar wipes in; Swap re-settles the
     title and stats (`.swap`). ✕, Esc and the backdrop close it with a 120–160 ms fade.
-  - Popover scales in, toasts slide up and out, the install hint rises in and sinks out.
+  - The theme switch cross-fades the colours and turns its icon in; toasts slide up and out, the install hint rises in and sinks out.
   - Everything is off under `prefers-reduced-motion` (a global CSS rule plus `motionOK()`).
 - Text: plain, friendly English in sentence case. Units with a space ("250 W", "90 %"),
   durations as `m:ss` / `h:mm:ss` (`fmtTime`) or "1h 05m" / "45 min" (`fmtDur`); day tiles
@@ -271,7 +273,7 @@ screen. Both activate only where the PWA assets are served next to the page — 
   `aria-pressed`; the current step has `aria-current="step"`.
 - Text contrast ≥ 4.5:1; coloured text uses the zone ink tokens.
 - Everything is reachable by keyboard; rows and option cards are focusable and open with
-  Enter or Space; Esc closes the dialog and the popover.
+  Enter or Space; Esc closes the dialog.
 
 ## Checklist for UI changes
 
@@ -279,7 +281,7 @@ screen. Both activate only where the PWA assets are served next to the page — 
 - [ ] Same as zwoTrainer where a shared component exists; new patterns documented here.
 - [ ] Mobile first: base rules for phones, wider layouts in `min-width` queries, compact sizes only under `(pointer: fine)`.
 - [ ] Checked in light **and** dark, at 1280, 768, 390 and 320 px; touch targets ≥ 44 px.
-- [ ] Top bar unchanged (brand · zwoTrainer · GitHub · coffee · Settings); new options in the Settings popover.
+- [ ] Top bar unchanged (brand · zwoTrainer · GitHub · coffee · theme switch).
 - [ ] Profile text is HTML, never stretched SVG text.
 - [ ] Interpolated text is escaped with `esc()`.
 - [ ] README / DESIGN.md updated if the change is user-visible or adds a pattern.
